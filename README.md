@@ -121,24 +121,12 @@ curl -X DELETE http://localhost:3000/users/1
    DB_PASSWORD=password
    ```
 
-4. **Set Up PostgreSQL**:
-   Create the database:
-   ```bash
-   psql -U postgres -c "CREATE DATABASE my_fans_db;"
-   ```
-
-5. **Run Migrations**:
-   Apply database migrations to set up the `User` table:
-   ```bash
-   npm run migration:run
-   ```
-
-6. **Start the Application**:
+4. **Start the Application**:
    ```bash
    npm run start:dev
    ```
 
-7. **Test APIs**:
+5. **Test APIs**:
    Use the `curl` commands in the API Documentation section to verify endpoints.
 
 ## Contributing
@@ -176,12 +164,6 @@ curl -X DELETE http://localhost:3000/users/1
   - Check PostgreSQL status:
     ```bash
     sudo service postgresql status
-    ```
-- **Migration Failures**:
-  - Generate missing migrations:
-    ```bash
-    npm run migration:generate -- migrations/UserMigration
-    npm run migration:run
     ```
 
 ## License
