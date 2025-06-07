@@ -9,7 +9,7 @@ import { Response } from 'express';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
-  private readonly logger = new Logger(GlobalExceptionFilter.name);
+  // private readonly logger = new Logger(GlobalExceptionFilter.name);
   catch(exception: unknown, host: ArgumentsHost): void {
     const caughtException = host.switchToHttp();
     const response = caughtException.getResponse<Response>();
@@ -33,10 +33,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         : (message as any)?.message || 'Unexpected error';
 
     
-    this.logger.error(
-      `[${request.method}] ${request.url} ${status} - ${errorMessage}`,
-      exception instanceof Error ? exception.stack : '',
-    );
+    // this.logger.error(
+    //   `[${request.method}] ${request.url} ${status} - ${errorMessage}`,
+    //   exception instanceof Error ? exception.stack : '',
+    // );
 
 
     response.status(status).json({
