@@ -1,6 +1,15 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './exception/globalException.filter';
+import { AppLogger } from './logger/app-logger.service';
+// import { appDataSource } from './migrations/appDataSource';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+    logger: new AppLogger(),
+  });
+
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 // import { appDataSource } from './migrations/appDataSource';

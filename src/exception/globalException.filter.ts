@@ -6,10 +6,11 @@ import {
   Logger
 } from '@nestjs/common';
 import { Response } from 'express';
+import { AppLogger } from '../logger/app-logger.service';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
-  // private readonly logger = new Logger(GlobalExceptionFilter.name);
+  private readonly logger = new AppLogger();
   catch(exception: unknown, host: ArgumentsHost): void {
     const caughtException = host.switchToHttp();
 
@@ -40,13 +41,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         ? message
         : (message as any)?.message || 'Unexpected error';
 
-    
-    // this.logger.error(
-    //   `[${request.method}] ${request.url} ${status} - ${errorMessage}`,
-    //   exception instanceof Error ? exception.stack : '',
-    // );
-
-
+    this.logger.error(
+      `[${request.method}] ${request.url} ${status} - ${errorMessage}`,
+      exception instanceof Error ? exception.stack : '',
+      GlobalExceptionFilter.name,
+    );
 
     // a json response to send out showing the full error details
     response.status(status).json({
