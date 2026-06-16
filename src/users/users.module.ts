@@ -2,12 +2,21 @@ import { Module } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CacheModule } from '@nestjs/cache-manager';
 import { User } from './user.entity';
+import { UsersQueryService } from './services/users-query.service';
+import { SearchService } from './services/search.service';
+import { PermissionService } from './services/permission.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User])],
-  providers: [UsersService],
+  imports: [TypeOrmModule.forFeature([User]), CacheModule.register()],
+  providers: [
+    UsersService,
+    UsersQueryService,
+    SearchService,
+    PermissionService,
+  ],
   controllers: [UsersController],
-  exports: [UsersService],
+  exports: [UsersService, UsersQueryService, SearchService, PermissionService],
 })
 export class UsersModule {}

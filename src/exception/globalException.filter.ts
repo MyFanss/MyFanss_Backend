@@ -3,7 +3,7 @@ import {
   Catch,
   ExceptionFilter,
   HttpException,
-  Logger
+  Logger,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { AppLogger } from '../logger/app-logger.service';
@@ -21,7 +21,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     // instance of the request to get the request details
     const request = caughtException.getRequest<Request>();
 
-    // get the appropriate status code of the the exception thrown e.g 400, 404 
+    // get the appropriate status code of the the exception thrown e.g 400, 404
     // or 500 if it internal error
     const status =
       exception instanceof HttpException ? exception.getStatus() : 500;
@@ -34,7 +34,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const error =
       exception instanceof HttpException
         ? exception.name
-        : (exception as Error)?.name ?? 'UnknownError';
+        : ((exception as Error)?.name ?? 'UnknownError');
 
     const errorMessage =
       typeof message === 'string'

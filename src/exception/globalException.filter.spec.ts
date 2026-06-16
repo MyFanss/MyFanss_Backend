@@ -1,5 +1,3 @@
-
-
 import { GlobalExceptionFilter } from './globalException.filter';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { ArgumentsHost, HttpArgumentsHost } from '@nestjs/common/interfaces';
@@ -52,7 +50,9 @@ describe('GlobalExceptionFilter', () => {
     const exception = new Error('Unexpected error');
     filter.catch(exception, mockHost);
 
-    expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+    expect(mockResponse.status).toHaveBeenCalledWith(
+      HttpStatus.INTERNAL_SERVER_ERROR,
+    );
     expect(mockResponse.json).toHaveBeenCalledWith(
       expect.objectContaining({
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
@@ -69,7 +69,9 @@ describe('GlobalExceptionFilter', () => {
     const exception = { some: 'unknown' };
     filter.catch(exception, mockHost);
 
-    expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+    expect(mockResponse.status).toHaveBeenCalledWith(
+      HttpStatus.INTERNAL_SERVER_ERROR,
+    );
     expect(mockResponse.json).toHaveBeenCalledWith(
       expect.objectContaining({
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
