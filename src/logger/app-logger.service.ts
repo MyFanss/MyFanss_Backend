@@ -1,5 +1,14 @@
-import { Injectable, LoggerService as NestLoggerService, LogLevel } from '@nestjs/common';
-import { createLogger, format, transports, Logger as WinstonLogger } from 'winston';
+import {
+  Injectable,
+  LoggerService as NestLoggerService,
+  LogLevel,
+} from '@nestjs/common';
+import {
+  createLogger,
+  format,
+  transports,
+  Logger as WinstonLogger,
+} from 'winston';
 
 const isProduction = process.env.NODE_ENV === 'production';
 

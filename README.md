@@ -166,6 +166,12 @@ curl -X DELETE http://localhost:3000/users/1
     sudo service postgresql status
     ```
 
+## Documentation
+
+- [Pagination, filtering & search](docs/pagination-filtering.md)
+- [Cursor pagination migration](docs/migration-pagination.md)
+- [Logging & monitoring](docs/logging-monitoring.md)
+
 ## License
 
-MIT License# MyFanss_Backend
+MIT License
