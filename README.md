@@ -129,6 +129,35 @@ curl -X DELETE http://localhost:3000/users/1
 5. **Test APIs**:
    Use the `curl` commands in the API Documentation section to verify endpoints.
 
+## Seeded Users
+
+Populate the local database with test users by running:
+
+```bash
+npm run seed:dev
+```
+
+The script is idempotent — re-running it skips users that already exist.  
+To wipe the users table first and start fresh:
+
+```bash
+npm run seed:dev -- --fresh
+```
+
+> ⚠️ The script refuses to run when `NODE_ENV=production`.
+
+### Test credentials
+
+| Name        | Email                  | Password        | Role (future) |
+|-------------|------------------------|-----------------|---------------|
+| Fan One     | fan1@dev.local         | Fan1Pass!       | fan           |
+| Fan Two     | fan2@dev.local         | Fan2Pass!       | fan           |
+| Creator One | creator1@dev.local     | Creator1Pass!   | creator       |
+| Creator Two | creator2@dev.local     | Creator2Pass!   | creator       |
+| Admin       | admin@dev.local        | AdminPass!      | admin         |
+
+These credentials are **development-only** and must never be used in production.
+
 ## Contributing
 
 1. Fork the repository.
