@@ -23,11 +23,19 @@ const dataSource = new DataSource({
 });
 
 const SEED_USERS = [
-  { name: 'Fan One',     email: 'fan1@dev.local',     password: 'Fan1Pass!' },
-  { name: 'Fan Two',     email: 'fan2@dev.local',     password: 'Fan2Pass!' },
-  { name: 'Creator One', email: 'creator1@dev.local', password: 'Creator1Pass!' },
-  { name: 'Creator Two', email: 'creator2@dev.local', password: 'Creator2Pass!' },
-  { name: 'Admin',       email: 'admin@dev.local',    password: 'AdminPass!' },
+  { name: 'Fan One', email: 'fan1@dev.local', password: 'Fan1Pass!' },
+  { name: 'Fan Two', email: 'fan2@dev.local', password: 'Fan2Pass!' },
+  {
+    name: 'Creator One',
+    email: 'creator1@dev.local',
+    password: 'Creator1Pass!',
+  },
+  {
+    name: 'Creator Two',
+    email: 'creator2@dev.local',
+    password: 'Creator2Pass!',
+  },
+  { name: 'Admin', email: 'admin@dev.local', password: 'AdminPass!' },
 ];
 
 async function seed() {
@@ -46,7 +54,9 @@ async function seed() {
       continue;
     }
     const hashed = await bcrypt.hash(u.password, 10);
-    await repo.save(repo.create({ name: u.name, email: u.email, password: hashed }));
+    await repo.save(
+      repo.create({ name: u.name, email: u.email, password: hashed }),
+    );
     console.log(`Seeded: ${u.email}`);
   }
 
