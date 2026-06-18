@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
+import { RefreshToken } from '../auth/entities/refresh-token.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateUserDto } from './dtos/createUser.dto';
 import { UserResponseDto } from './dtos/userResponse.dto';
@@ -29,6 +30,8 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(RefreshToken)
+    private readonly refreshTokenRepository: Repository<RefreshToken>,
     private readonly queryService: UsersQueryService,
     private readonly searchService: SearchService,
     private readonly permissionService: PermissionService,
@@ -157,8 +160,22 @@ export class UsersService {
       throw new NotFoundException('user not found');
     }
 
-    Object.assign(user, updateUserDto);
+    const updatePayload = { ...updateUserDto };
+    let passwordChanged = false;
+    if (typeof updatePayload.password === 'string') {
+      updatePayload.password = await bcrypt.hash(updatePayload.password, 10);
+      passwordChanged = true;
+    }
+
+    Object.assign(user, updatePayload);
     let savedUser: User = await this.userRepository.save(user);
+
+    if (passwordChanged) {
+      await this.refreshTokenRepository.update(
+        { userId: id, isRevoked: false },
+        { isRevoked: true },
+      );
+    }
 
     // Update search text and invalidate caches
     await this.searchService.updateSearchTextForUser(savedUser.id);

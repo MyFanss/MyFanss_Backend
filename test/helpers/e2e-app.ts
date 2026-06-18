@@ -3,6 +3,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { AppModule } from '../../src/app.module';
+import { RefreshToken } from '../../src/auth/entities/refresh-token.entity';
+import { GlobalExceptionFilter } from '../../src/exception/globalException.filter';
 import { User } from '../../src/users/user.entity';
 
 export interface E2eTestApp {
@@ -10,6 +12,7 @@ export interface E2eTestApp {
   moduleFixture: TestingModule;
   dataSource: DataSource;
   userRepository: Repository<User>;
+  refreshTokenRepository: Repository<RefreshToken>;
 }
 
 export async function createE2eApp(): Promise<E2eTestApp> {
@@ -25,6 +28,7 @@ export async function createE2eApp(): Promise<E2eTestApp> {
       transform: true,
     }),
   );
+  app.useGlobalFilters(new GlobalExceptionFilter());
   await app.init();
 
   return {
@@ -33,6 +37,9 @@ export async function createE2eApp(): Promise<E2eTestApp> {
     dataSource: moduleFixture.get(DataSource),
     userRepository: moduleFixture.get<Repository<User>>(
       getRepositoryToken(User),
+    ),
+    refreshTokenRepository: moduleFixture.get<Repository<RefreshToken>>(
+      getRepositoryToken(RefreshToken),
     ),
   };
 }

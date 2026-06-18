@@ -4,12 +4,16 @@ import { UsersController } from './users.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
 import { User } from './user.entity';
+import { RefreshToken } from '../auth/entities/refresh-token.entity';
 import { UsersQueryService } from './services/users-query.service';
 import { SearchService } from './services/search.service';
 import { PermissionService } from './services/permission.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User]), CacheModule.register()],
+  imports: [
+    TypeOrmModule.forFeature([User, RefreshToken]),
+    CacheModule.register(),
+  ],
   providers: [
     UsersService,
     UsersQueryService,

@@ -3,43 +3,48 @@ import {
   Catch,
   ExceptionFilter,
   HttpException,
-  Logger,
 } from '@nestjs/common';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { AppLogger } from '../logger/app-logger.service';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
   private readonly logger = new AppLogger();
+
   catch(exception: unknown, host: ArgumentsHost): void {
     const caughtException = host.switchToHttp();
-
-    // response and request objects
-    // instance of the response to send out the error
     const response = caughtException.getResponse<Response>();
-
-    // instance of the request to get the request details
     const request = caughtException.getRequest<Request>();
 
-    // get the appropriate status code of the the exception thrown e.g 400, 404
-    // or 500 if it internal error
     const status =
       exception instanceof HttpException ? exception.getStatus() : 500;
-    // get the message thrown from the exception object
-    const message =
-      exception instanceof HttpException
-        ? exception.message
-        : 'An error occurred | internal server error';
 
-    const error =
+    let message: string | string[] =
+      'An error occurred | internal server error';
+    let error =
       exception instanceof HttpException
         ? exception.name
         : ((exception as Error)?.name ?? 'UnknownError');
+    let code: string | undefined;
+
+    if (exception instanceof HttpException) {
+      const exResponse = exception.getResponse();
+      if (typeof exResponse === 'object' && exResponse !== null) {
+        const responseBody = exResponse as Record<string, unknown>;
+        message =
+          (responseBody.message as string | string[] | undefined) ??
+          exception.message;
+        error = (responseBody.error as string | undefined) ?? error;
+        code = responseBody.code as string | undefined;
+      } else if (typeof exResponse === 'string') {
+        message = exResponse;
+      } else {
+        message = exception.message;
+      }
+    }
 
     const errorMessage =
-      typeof message === 'string'
-        ? message
-        : (message as any)?.message || 'Unexpected error';
+      typeof message === 'string' ? message : message.join(', ');
 
     this.logger.error(
       `[${request.method}] ${request.url} ${status} - ${errorMessage}`,
@@ -47,13 +52,15 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       GlobalExceptionFilter.name,
     );
 
-    // a json response to send out showing the full error details
-    response.status(status).json({
+    const body: Record<string, unknown> = {
       statusCode: status,
-      message: message,
+      message,
       timestamp: new Date().toISOString(),
       path: request.url,
-      error: error,
-    });
+      error,
+    };
+    if (code) body.code = code;
+
+    response.status(status).json(body);
   }
 }
