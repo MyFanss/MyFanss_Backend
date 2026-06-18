@@ -11,6 +11,7 @@ import { CreateUserDto } from './dtos/createUser.dto';
 import { UserResponseDto } from './dtos/userResponse.dto';
 import { plainToInstance } from 'class-transformer';
 import { UpdateUserDto } from './dtos/updateUser.dto';
+import { UpdateProfileDto } from './dtos/updateProfile.dto';
 import { GetUsersQueryDto } from './dtos/get-users-query.dto';
 import {
   PaginatedResponseDto,
@@ -171,6 +172,25 @@ export class UsersService {
         excludeExtraneousValues: true,
       },
     );
+  }
+
+  async updateProfile(
+    id: number,
+    updateProfileDto: UpdateProfileDto,
+  ): Promise<UserResponseDto> {
+    const user: User | null = await this.findById(id);
+    if (!user) {
+      throw new NotFoundException('user not found');
+    }
+
+    Object.assign(user, updateProfileDto);
+    const savedUser: User = await this.userRepository.save(user);
+
+    await this.invalidateUserRelatedCaches(savedUser.id);
+
+    return plainToInstance(UserResponseDto, savedUser, {
+      excludeExtraneousValues: true,
+    });
   }
 
   private async invalidateUserRelatedCaches(userId: number): Promise<void> {
