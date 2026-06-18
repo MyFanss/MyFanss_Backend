@@ -20,6 +20,7 @@ describe('UsersController', () => {
             getUserById: jest.fn(),
             createUser: jest.fn(),
             updateUser: jest.fn(),
+            updateProfile: jest.fn(),
             deleteUser: jest.fn(),
           },
         },
@@ -246,6 +247,36 @@ describe('UsersController', () => {
 
       expect(result).toBe(message);
       expect(service.deleteUser).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe('updateProfile', () => {
+    it('should update profile fields', async () => {
+      const profileDto = {
+        displayName: 'Jane',
+        bio: 'My bio',
+        avatarUrl: 'https://example.com/avatar.png',
+      };
+
+      const mockUpdated: UserResponseDto = {
+        id: 1,
+        name: 'John Doe',
+        email: 'john@example.com',
+        role: 'user',
+        status: 'active',
+        created_at: new Date(),
+        updated_at: new Date(),
+        displayName: 'Jane',
+        bio: 'My bio',
+        avatarUrl: 'https://example.com/avatar.png',
+      };
+
+      (service.updateProfile as jest.Mock).mockResolvedValue(mockUpdated);
+
+      const result = await controller.updateProfile(1, profileDto);
+
+      expect(result).toEqual(mockUpdated);
+      expect(service.updateProfile).toHaveBeenCalledWith(1, profileDto);
     });
   });
 });

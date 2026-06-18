@@ -28,6 +28,15 @@ export class UserResponseDto {
   updated_at: Date;
 
   @Expose()
+  displayName?: string | null;
+
+  @Expose()
+  bio?: string | null;
+
+  @Expose()
+  avatarUrl?: string | null;
+
+  @Expose()
   message?: string;
 
   @Expose()

@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Put,
   UseGuards,
@@ -13,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dtos/createUser.dto';
+import { UpdateProfileDto } from './dtos/updateProfile.dto';
 import { UserResponseDto } from './dtos/userResponse.dto';
 import { GetUsersQueryDto } from './dtos/get-users-query.dto';
 import { PaginatedResponseDto } from './dtos/paginated-response.dto';
@@ -24,6 +26,7 @@ import {
   ApiBearerAuth,
   ApiParam,
   ApiQuery,
+  ApiBody,
 } from '@nestjs/swagger';
 
 interface CurrentUser {
@@ -233,5 +236,27 @@ export class UsersController {
     @Body() updateUserDto: CreateUserDto,
   ): Promise<UserResponseDto> {
     return this.usersService.updateUser(id, updateUserDto);
+  }
+
+  @Patch(':id/profile')
+  @ApiOperation({ summary: 'Partially update user profile fields' })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiBody({ type: UpdateProfileDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile updated successfully',
+    type: UserResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error (e.g. bio too long, invalid URL)',
+  })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async updateProfile(
+    @Param('id') id: number,
+    @Body() updateProfileDto: UpdateProfileDto,
+  ): Promise<UserResponseDto> {
+    return this.usersService.updateProfile(id, updateProfileDto);
   }
 }

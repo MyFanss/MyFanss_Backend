@@ -48,4 +48,13 @@ export class User {
 
   @Column({ type: 'tsvector', nullable: true })
   search_text: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  displayName?: string | null;
+
+  @Column({ type: 'varchar', length: 300, nullable: true })
+  bio?: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  avatarUrl?: string | null;
 }
