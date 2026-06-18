@@ -9,6 +9,28 @@ on:
 jobs:
   checks:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: my_fans_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d my_fans_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      TEST_DB_HOST: 127.0.0.1
+      TEST_DB_PORT: 5432
+      TEST_DB_NAME: my_fans_test
+      TEST_DB_USERNAME: postgres
+      TEST_DB_PASSWORD: postgres
+      TEST_JWT_SECRET: ci-test-jwt-secret
+      TEST_JWT_EXPIRES_IN: 1h
 
     steps:
       - name: Checkout
@@ -28,6 +50,9 @@ jobs:
 
       - name: Unit tests
         run: npm test
+
+      - name: E2E tests
+        run: npm run test:e2e
 
       - name: Build
         run: npm run build
