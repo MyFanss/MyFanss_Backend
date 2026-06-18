@@ -1,11 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { User } from 'src/users/user.entity';
-import { DataSource, DataSourceOptions } from 'typeorm';
-
-// import { config } from "dotenv";
-// config({ path: '.env' })
-
-// const configService = new ConfigService();
+import { RefreshToken } from 'src/auth/entities/refresh-token.entity';
+import { DataSourceOptions } from 'typeorm';
 
 export function dataOption(configService: ConfigService): DataSourceOptions {
   return {
@@ -15,11 +11,7 @@ export function dataOption(configService: ConfigService): DataSourceOptions {
     username: configService.get<string>('DB_USERNAME'),
     password: configService.get<string>('DB_PASSWORD'),
     database: configService.get<string>('DB_NAME'),
-    entities: [User],
+    entities: [User, RefreshToken],
     synchronize: true,
-    // migrations: ['dis/migrations/*.ts'],
-    // migrationsRun: true,
   };
 }
-
-// export const appDataSource = new DataSource(dataOption);

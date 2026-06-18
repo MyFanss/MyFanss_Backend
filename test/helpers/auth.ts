@@ -12,6 +12,7 @@ export interface SignupPayload {
 export interface AuthResult {
   payload: SignupPayload;
   token: string;
+  refreshToken: string;
   user: {
     id: number;
     name: string;
@@ -42,7 +43,8 @@ export async function signupUser(
 
   return {
     payload,
-    token: response.body.access_token,
+    token: response.body.accessToken,
+    refreshToken: response.body.refreshToken,
     user: response.body.user,
   };
 }
@@ -55,7 +57,7 @@ export async function loginUser(
   const response = await request(app.getHttpServer())
     .post('/auth/login')
     .send({ email, password })
-    .expect(201);
+    .expect(200);
 
   return {
     payload: {
@@ -63,7 +65,8 @@ export async function loginUser(
       email,
       password,
     },
-    token: response.body.access_token,
+    token: response.body.accessToken,
+    refreshToken: response.body.refreshToken,
     user: response.body.user,
   };
 }

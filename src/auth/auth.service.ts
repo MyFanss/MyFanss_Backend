@@ -1,59 +1,100 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
-import { ConfigService } from '@nestjs/config';
 import { SignupDto } from './dto/signup.dto';
+import { TokenService, TokenPair } from './token.service';
+import { RefreshToken } from './entities/refresh-token.entity';
 import * as bcrypt from 'bcrypt';
+
+export interface AuthResponse extends TokenPair {
+  user: { id: number; name: string; email: string };
+  message?: string;
+}
+
+export interface AuthenticatedUser {
+  id: number;
+  name: string;
+  email: string;
+}
 
 @Injectable()
 export class AuthService {
   constructor(
-    private usersService: UsersService,
-    private jwtService: JwtService,
-    private configService: ConfigService,
+    private readonly usersService: UsersService,
+    private readonly tokenService: TokenService,
   ) {}
 
-  async validateUser(email: string, pass: string): Promise<any> {
+  async validateUser(
+    email: string,
+    pass: string,
+  ): Promise<AuthenticatedUser | null> {
     const user = await this.usersService.findByEmail(email);
     if (user && (await bcrypt.compare(pass, user.password))) {
-      const { password, ...result } = user;
-      return result;
+      return { id: user.id, name: user.name, email: user.email };
     }
     return null;
   }
 
-  async signup(signupDto: SignupDto) {
+  async signup(
+    signupDto: SignupDto,
+    opts: { deviceId?: string; userAgent?: string; ipAddress?: string } = {},
+  ): Promise<AuthResponse> {
     const userResponse = await this.usersService.createUser(signupDto);
-    // Get the actual user to create JWT payload
     const user = await this.usersService.findByEmail(signupDto.email);
+    if (!user) throw new UnauthorizedException('User creation failed');
 
-    if (!user) {
-      throw new UnauthorizedException('User creation failed');
-    }
-
-    const payload = { username: signupDto.email, sub: user.id };
+    const tokens = await this.tokenService.issueTokenPair(
+      user.id,
+      user.email,
+      opts,
+    );
     return {
-      access_token: this.jwtService.sign(payload),
-      expires_in: this.configService.get<string>('JWT_EXPIRES_IN'),
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-      },
+      ...tokens,
+      user: { id: user.id, name: user.name, email: user.email },
       message: userResponse.message,
     };
   }
 
-  async login(user: any) {
-    const payload = { username: user.email, sub: user.id };
+  async login(
+    user: AuthenticatedUser,
+    opts: { deviceId?: string; userAgent?: string; ipAddress?: string } = {},
+  ): Promise<AuthResponse> {
+    const tokens = await this.tokenService.issueTokenPair(
+      user.id,
+      user.email,
+      opts,
+    );
     return {
-      access_token: this.jwtService.sign(payload),
-      expires_in: this.configService.get<string>('JWT_EXPIRES_IN'),
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-      },
+      ...tokens,
+      user: { id: user.id, name: user.name, email: user.email },
     };
+  }
+
+  async refresh(
+    rawRefreshToken: string,
+    opts: { deviceId?: string; userAgent?: string; ipAddress?: string } = {},
+  ): Promise<TokenPair> {
+    return this.tokenService.rotateRefreshToken(rawRefreshToken, opts);
+  }
+
+  async logout(refreshToken: string): Promise<void> {
+    const payload = this.tokenService.decodeRefreshToken(refreshToken);
+    if (!payload) return;
+    await this.tokenService.revokeToken(payload.tokenId);
+  }
+
+  async logoutAll(userId: number): Promise<void> {
+    await this.tokenService.revokeAllUserTokens(userId);
+  }
+
+  async getSessions(userId: number): Promise<RefreshToken[]> {
+    return this.tokenService.getActiveSessions(userId);
+  }
+
+  async deleteSession(sessionId: string, userId: number): Promise<boolean> {
+    return this.tokenService.revokeSession(sessionId, userId);
+  }
+
+  async invalidateSessionsOnPasswordChange(userId: number): Promise<void> {
+    await this.tokenService.revokeAllUserTokens(userId);
   }
 }
