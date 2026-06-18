@@ -19,7 +19,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const status =
       exception instanceof HttpException ? exception.getStatus() : 500;
 
-    let message: string | string[] = 'An error occurred | internal server error';
+    let message: string | string[] =
+      'An error occurred | internal server error';
     let error =
       exception instanceof HttpException
         ? exception.name

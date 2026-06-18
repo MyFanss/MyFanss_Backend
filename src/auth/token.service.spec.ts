@@ -119,9 +119,11 @@ describe('TokenService', () => {
         throw error;
       });
 
-      await expect(service.rotateRefreshToken('expired')).rejects.toMatchObject({
-        response: expect.objectContaining({ code: 'REFRESH_TOKEN_EXPIRED' }),
-      });
+      await expect(service.rotateRefreshToken('expired')).rejects.toMatchObject(
+        {
+          response: expect.objectContaining({ code: 'REFRESH_TOKEN_EXPIRED' }),
+        },
+      );
     });
 
     it('throws REFRESH_TOKEN_INVALID for wrong token type', async () => {
@@ -229,7 +231,13 @@ describe('TokenService', () => {
       const result = await service.getActiveSessions(1);
       expect(result).toEqual(sessions);
       expect(repo.find).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { userId: 1, isRevoked: false } }),
+        expect.objectContaining({
+          where: {
+            userId: 1,
+            isRevoked: false,
+            expiresAt: expect.any(Object),
+          },
+        }),
       );
     });
   });

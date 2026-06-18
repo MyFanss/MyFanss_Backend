@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MoreThan, Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import * as bcrypt from 'bcrypt';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { AppLogger } from '../logger/app-logger.service';
@@ -56,11 +56,7 @@ export class TokenService {
     email: string,
     opts: DeviceInfo & { familyId?: string } = {},
   ): Promise<TokenPair> {
-    const tokenPair = await this.createTokenPair(
-      userId,
-      email,
-      opts,
-    );
+    const tokenPair = await this.createTokenPair(userId, email, opts);
     return this.toPublicTokenPair(tokenPair);
   }
 
@@ -69,14 +65,14 @@ export class TokenService {
     email: string,
     opts: DeviceInfo & { familyId?: string } = {},
   ): Promise<TokenPair & { tokenId: string }> {
-    const jti = uuidv4();
-    const familyId = opts.familyId ?? uuidv4();
-    const tokenId = uuidv4();
+    const jti = randomUUID();
+    const familyId = opts.familyId ?? randomUUID();
+    const tokenId = randomUUID();
 
     const accessPayload = {
       sub: userId,
       email,
-      jti: uuidv4(),
+      jti: randomUUID(),
       type: 'access' as const,
     };
     const refreshPayload: Omit<RefreshPayload, 'iat' | 'exp'> = {

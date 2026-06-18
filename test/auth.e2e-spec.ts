@@ -306,11 +306,10 @@ describe('Auth E2E', () => {
       const second = await signupUser(testApp.app, {
         email: 'second-session@example.com',
       });
-      const secondSession = await testApp.refreshTokenRepository.findOneByOrFail(
-        {
+      const secondSession =
+        await testApp.refreshTokenRepository.findOneByOrFail({
           userId: second.user.id,
-        },
-      );
+        });
 
       await request(testApp.app.getHttpServer())
         .delete(`/auth/sessions/${secondSession.id}`)

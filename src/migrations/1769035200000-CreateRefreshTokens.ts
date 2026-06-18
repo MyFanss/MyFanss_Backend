@@ -101,10 +101,7 @@ export class CreateRefreshTokens1769035200000 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.dropIndex(
-      'refresh_tokens',
-      'IDX_REFRESH_TOKENS_FAMILY',
-    );
+    await queryRunner.dropIndex('refresh_tokens', 'IDX_REFRESH_TOKENS_FAMILY');
     await queryRunner.dropIndex(
       'refresh_tokens',
       'IDX_REFRESH_TOKENS_USER_REVOKED',

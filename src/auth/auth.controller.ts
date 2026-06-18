@@ -41,7 +41,9 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('signup')
-  @ApiOperation({ summary: 'User signup — returns access + refresh token pair' })
+  @ApiOperation({
+    summary: 'User signup — returns access + refresh token pair',
+  })
   @ApiResponse({ status: 201, type: AuthTokensResponseDto })
   @ApiResponse({ status: 409, description: 'Email already exists' })
   @ApiBody({ type: SignupDto })
