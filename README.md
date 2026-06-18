@@ -129,6 +129,40 @@ curl -X DELETE http://localhost:3000/users/1
 5. **Test APIs**:
    Use the `curl` commands in the API Documentation section to verify endpoints.
 
+### Running Tests
+
+Run the unit test suite:
+
+```bash
+npm test
+```
+
+Run the end-to-end suite:
+
+```bash
+npm run test:e2e
+```
+
+The e2e suite uses a dedicated PostgreSQL test database and does not read your normal `DB_*` variables. By default it connects to:
+
+```env
+TEST_DB_HOST=127.0.0.1
+TEST_DB_PORT=5432
+TEST_DB_NAME=my_fans_test
+TEST_DB_USERNAME=postgres
+TEST_DB_PASSWORD=postgres
+TEST_JWT_SECRET=test-jwt-secret
+TEST_JWT_EXPIRES_IN=1h
+```
+
+Create the database once before running locally:
+
+```bash
+createdb -h 127.0.0.1 -U postgres my_fans_test
+```
+
+Override the `TEST_DB_*` variables if your local PostgreSQL user, password, host, or port differs. Test data is truncated between specs.
+
 ## Seeded Users
 
 Populate the local database with test users by running:
