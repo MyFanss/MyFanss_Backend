@@ -11,6 +11,7 @@ import {
   Query,
   Header,
   HttpCode,
+  Req,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dtos/createUser.dto';
@@ -20,6 +21,7 @@ import { GetUsersQueryDto } from './dtos/get-users-query.dto';
 import { PaginatedResponseDto } from './dtos/paginated-response.dto';
 import { UpdateUserDto } from './dtos/updateUser.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { AdminGuard } from '../audit/admin.guard';
 import {
   ApiTags,
   ApiOperation,
@@ -30,11 +32,21 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 
+import { Request } from 'express';
+
 interface CurrentUser {
   id: number;
   email: string;
   role: string;
   orgId?: number;
+}
+
+interface AuthenticatedRequest extends Request {
+  user: {
+    userId: number;
+    email: string;
+    username: string;
+  };
 }
 
 @ApiTags('Users')
@@ -213,13 +225,36 @@ export class UsersController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete user by ID' })
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiOperation({ summary: 'Delete user by ID (admin only)' })
   @ApiParam({ name: 'id', description: 'User ID' })
   @ApiResponse({ status: 200, description: 'User deleted successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async deleteUser(@Param('id') id: number): Promise<string> {
-    return this.usersService.deleteUser(id);
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async deleteUser(
+    @Param('id') id: number,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<string> {
+    return this.usersService.deleteUser(id, req.user.userId);
+  }
+
+  @Patch(':id/role')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiOperation({ summary: 'Change user role (admin only)' })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiBody({
+    schema: { type: 'object', properties: { role: { type: 'string' } } },
+  })
+  @ApiResponse({ status: 200, description: 'Role updated successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async changeUserRole(
+    @Param('id') id: number,
+    @Body('role') role: string,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<UserResponseDto> {
+    return this.usersService.changeUserRole(id, role, req.user.userId);
   }
 
   @Put(':id')

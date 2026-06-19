@@ -19,6 +19,8 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { AuthTokensResponseDto } from './dto/auth-tokens-response.dto';
 import { SessionResponseDto } from './dto/session-response.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { AuditService } from '../audit/audit.service';
+import { AuditAction } from '../audit/audit-action.enum';
 import {
   ApiTags,
   ApiOperation,
@@ -38,7 +40,10 @@ interface AuthenticatedRequest extends Request {
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly auditService: AuditService,
+  ) {}
 
   @Post('signup')
   @ApiOperation({
@@ -62,7 +67,19 @@ export class AuthController {
       loginDto.email,
       loginDto.password,
     );
-    if (!user) throw new UnauthorizedException('Invalid credentials');
+    if (!user) {
+      const ip =
+        (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress;
+      void this.auditService.log({
+        actorId: null,
+        action: AuditAction.USER_LOGIN_FAILED,
+        targetType: 'User',
+        targetId: null,
+        metadata: { email: loginDto.email },
+        ipAddress: ip,
+      });
+      throw new UnauthorizedException('Invalid credentials');
+    }
     return this.authService.login(user, this.extractDeviceInfo(req));
   }
 
