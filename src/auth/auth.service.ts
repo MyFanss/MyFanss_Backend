@@ -14,6 +14,7 @@ export interface AuthenticatedUser {
   id: number;
   name: string;
   email: string;
+  role?: string;
 }
 
 @Injectable()
@@ -29,7 +30,12 @@ export class AuthService {
   ): Promise<AuthenticatedUser | null> {
     const user = await this.usersService.findByEmail(email);
     if (user && (await bcrypt.compare(pass, user.password))) {
-      return { id: user.id, name: user.name, email: user.email };
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role ?? 'user',
+      };
     }
     return null;
   }
@@ -45,7 +51,10 @@ export class AuthService {
     const tokens = await this.tokenService.issueTokenPair(
       user.id,
       user.email,
-      opts,
+      {
+        ...opts,
+        role: user.role ?? 'user',
+      },
     );
     return {
       ...tokens,
@@ -61,7 +70,10 @@ export class AuthService {
     const tokens = await this.tokenService.issueTokenPair(
       user.id,
       user.email,
-      opts,
+      {
+        ...opts,
+        role: user.role ?? 'user',
+      },
     );
     return {
       ...tokens,

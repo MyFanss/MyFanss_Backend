@@ -192,6 +192,28 @@ npm run seed:dev -- --fresh
 
 These credentials are **development-only** and must never be used in production.
 
+## Creator Analytics Snapshot
+
+#### Get creator analytics for the current authenticated creator
+
+```bash
+curl -H "Authorization: Bearer <ACCESS_TOKEN>" "http://localhost:3000/creators/me/analytics?days=30"
+```
+
+**Response**:
+
+```json
+{
+  "data": {
+    "subscriberCount": 120,
+    "newSubscribers": 15,
+    "churnedSubscribers": 3,
+    "periodDays": 30,
+    "topReferrers": []
+  }
+}
+```
+
 ## Contributing
 
 1. Fork the repository.

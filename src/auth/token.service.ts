@@ -36,6 +36,7 @@ type DeviceInfo = {
   deviceId?: string;
   userAgent?: string;
   ipAddress?: string;
+  role?: string;
 };
 
 @Injectable()
@@ -74,6 +75,7 @@ export class TokenService {
       email,
       jti: randomUUID(),
       type: 'access' as const,
+      role: opts.role ?? 'user',
     };
     const refreshPayload: Omit<RefreshPayload, 'iat' | 'exp'> = {
       sub: userId,
