@@ -65,7 +65,11 @@ describe('UsersController', () => {
 
       (service.getAllUsers as jest.Mock).mockResolvedValue(mockResponse);
 
-      const currentUser = { id: 1, email: 'admin@example.com', role: 'admin' };
+      const currentUser = {
+        userId: 1,
+        email: 'admin@example.com',
+        role: 'admin',
+      };
       const result = await controller.getAllUsers(query, currentUser);
 
       expect(result).toEqual(mockResponse);
@@ -92,7 +96,11 @@ describe('UsersController', () => {
 
       (service.getAllUsers as jest.Mock).mockResolvedValue(mockResponse);
 
-      const currentUser = { id: 1, email: 'admin@example.com', role: 'admin' };
+      const currentUser = {
+        userId: 1,
+        email: 'admin@example.com',
+        role: 'admin',
+      };
       await controller.getAllUsers(query, currentUser);
 
       expect(service.getAllUsers).toHaveBeenCalledWith(query, currentUser);
@@ -119,7 +127,11 @@ describe('UsersController', () => {
 
       (service.getAllUsers as jest.Mock).mockResolvedValue(mockResponse);
 
-      const currentUser = { id: 1, email: 'admin@example.com', role: 'admin' };
+      const currentUser = {
+        userId: 1,
+        email: 'admin@example.com',
+        role: 'admin',
+      };
       await controller.getAllUsers(query, currentUser);
 
       expect(service.getAllUsers).toHaveBeenCalledWith(query, currentUser);
@@ -145,7 +157,11 @@ describe('UsersController', () => {
 
       (service.getAllUsers as jest.Mock).mockResolvedValue(mockResponse);
 
-      const currentUser = { id: 1, email: 'admin@example.com', role: 'admin' };
+      const currentUser = {
+        userId: 1,
+        email: 'admin@example.com',
+        role: 'admin',
+      };
       await controller.getAllUsers(query, currentUser);
 
       expect(service.getAllUsers).toHaveBeenCalledWith(query, currentUser);
@@ -222,7 +238,11 @@ describe('UsersController', () => {
 
       (service.updateUser as jest.Mock).mockResolvedValue(mockUpdatedUser);
 
-      const adminUser = { id: 1, email: 'admin@example.com', role: 'admin' };
+      const adminUser = {
+        userId: 1,
+        email: 'admin@example.com',
+        role: 'admin',
+      };
       const result = await controller.updateUser(1, updateDto, adminUser);
 
       expect(result).toEqual(mockUpdatedUser);
@@ -266,7 +286,11 @@ describe('UsersController', () => {
 
       (service.updateProfile as jest.Mock).mockResolvedValue(mockUpdated);
 
-      const adminUser = { id: 1, email: 'admin@example.com', role: 'admin' };
+      const adminUser = {
+        userId: 1,
+        email: 'admin@example.com',
+        role: 'admin',
+      };
       const result = await controller.updateProfile(1, profileDto, adminUser);
 
       expect(result).toEqual(mockUpdated);

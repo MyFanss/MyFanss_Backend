@@ -202,7 +202,12 @@ export class UsersController {
   async getAllUsers(
     @Query() query: GetUsersQueryDto,
     @CurrentUser()
-    currentUser?: { id: number; email: string; role: string; orgId?: number },
+    currentUser?: {
+      userId: number;
+      email: string;
+      role: string;
+      orgId?: number;
+    },
   ): Promise<PaginatedResponseDto<UserResponseDto>> {
     return this.usersService.getAllUsers(query, currentUser);
   }
@@ -235,9 +240,10 @@ export class UsersController {
   async updateUser(
     @Param('id') id: number,
     @Body() updateUserDto: UpdateUserDto,
-    @CurrentUser() currentUser?: { id: number; email: string; role: string },
+    @CurrentUser()
+    currentUser?: { userId: number; email: string; role: string },
   ): Promise<UserResponseDto> {
-    const isOwner = currentUser && currentUser.id === id;
+    const isOwner = currentUser && currentUser.userId === Number(id);
     const isAdmin = currentUser && currentUser.role === UserRole.ADMIN;
 
     if (!isOwner && !isAdmin) {
@@ -273,9 +279,10 @@ export class UsersController {
   async updateProfile(
     @Param('id') id: number,
     @Body() updateProfileDto: UpdateProfileDto,
-    @CurrentUser() currentUser?: { id: number; email: string; role: string },
+    @CurrentUser()
+    currentUser?: { userId: number; email: string; role: string },
   ): Promise<UserResponseDto> {
-    const isOwner = currentUser && currentUser.id === id;
+    const isOwner = currentUser && currentUser.userId === Number(id);
     const isAdmin = currentUser && currentUser.role === UserRole.ADMIN;
 
     if (!isOwner && !isAdmin) {
