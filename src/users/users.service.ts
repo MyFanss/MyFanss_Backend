@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
   Inject,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
@@ -24,6 +25,8 @@ import { PermissionService, JwtPayload } from './services/permission.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import * as bcrypt from 'bcrypt';
+import { UserRole } from '../auth/enums/role.enum';
+import { AppLogger } from '../logger/app-logger.service';
 
 @Injectable()
 export class UsersService {
@@ -37,6 +40,7 @@ export class UsersService {
     private readonly permissionService: PermissionService,
     @Inject(CACHE_MANAGER)
     private cacheManager: Cache,
+    private readonly logger: AppLogger,
   ) {}
 
   async getAllUsers(
@@ -226,5 +230,39 @@ export class UsersService {
     if (query.created_to) filters.created_to = query.created_to;
 
     return filters;
+  }
+
+  async updateUserRole(
+    userId: number,
+    role: UserRole,
+    actorId?: number,
+  ): Promise<User> {
+    const user = await this.userRepository.findOneBy({ id: userId });
+    if (!user) {
+      throw new NotFoundException('user not found');
+    }
+
+    const oldRole = user.role as UserRole;
+    if (oldRole === role) {
+      return user;
+    }
+
+    const updatedUser = await this.userRepository.save({
+      ...user,
+      role,
+    });
+
+    this.logger.log(
+      `Role changed: actorId=${actorId ?? 'system'} targetId=${userId} oldRole=${oldRole} newRole=${role}`,
+      UsersService.name,
+    );
+
+    await this.invalidateUserRelatedCaches(userId);
+
+    return updatedUser;
+  }
+
+  async countAdmins(): Promise<number> {
+    return this.userRepository.countBy({ role: UserRole.ADMIN });
   }
 }
