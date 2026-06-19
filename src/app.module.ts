@@ -12,6 +12,7 @@ import { LoggerModule } from './logger/logger.module';
 import { MonitoringModule } from './monitoring/monitoring.module';
 import { HealthModule } from './monitoring/health.module';
 import { RateLimitService } from './common/services/rate-limit.service';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { RateLimitService } from './common/services/rate-limit.service';
     HealthModule,
     AuthModule,
     SubscriptionsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService, RateLimitService],

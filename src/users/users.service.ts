@@ -24,6 +24,7 @@ import { PermissionService, JwtPayload } from './services/permission.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import * as bcrypt from 'bcrypt';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class UsersService {
@@ -35,6 +36,7 @@ export class UsersService {
     private readonly queryService: UsersQueryService,
     private readonly searchService: SearchService,
     private readonly permissionService: PermissionService,
+    private readonly notificationsService: NotificationsService,
     @Inject(CACHE_MANAGER)
     private cacheManager: Cache,
   ) {}
@@ -106,6 +108,7 @@ export class UsersService {
     // Update search text and invalidate caches
     await this.searchService.updateSearchTextForUser(savedUser.id);
     await this.invalidateUserRelatedCaches(savedUser.id);
+    await this.notificationsService.createDefaultPreferences(savedUser.id);
 
     return plainToInstance(
       UserResponseDto,
