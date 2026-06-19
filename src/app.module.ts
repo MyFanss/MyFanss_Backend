@@ -3,6 +3,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CacheModule } from '@nestjs/cache-manager';
@@ -32,7 +33,7 @@ import { AdminModule } from './admin/admin.module';
     MonitoringModule,
     HealthModule,
     AuthModule,
-    AdminModule,
+    SubscriptionsModule,
   ],
   controllers: [AppController],
   providers: [AppService, RateLimitService],
