@@ -8,3 +8,4 @@ process.env.DB_PASSWORD = process.env.TEST_DB_PASSWORD ?? 'postgres';
 
 process.env.JWT_SECRET = process.env.TEST_JWT_SECRET ?? 'test-jwt-secret';
 process.env.JWT_EXPIRES_IN = process.env.TEST_JWT_EXPIRES_IN ?? '1h';
+process.env.THROTTLE_ENABLED = 'false';

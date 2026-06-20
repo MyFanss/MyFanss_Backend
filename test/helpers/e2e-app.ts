@@ -49,6 +49,12 @@ export async function createE2eApp(): Promise<E2eTestApp> {
   };
 }
 
+/** @deprecated Use createE2eApp() — kept for older e2e specs */
+export async function createTestingApp(): Promise<INestApplication> {
+  const testApp = await createE2eApp();
+  return testApp.app;
+}
+
 export async function clearDatabase(dataSource: DataSource): Promise<void> {
   await dataSource.query(
     'TRUNCATE TABLE "audit_logs" RESTART IDENTITY CASCADE',

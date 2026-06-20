@@ -10,16 +10,15 @@ describe('Posts (e2e)', () => {
 
   beforeAll(async () => {
     app = await createTestingApp();
-    await app.init();
 
-    // Signup a test user
     const signupRes = await request(app.getHttpServer())
       .post('/auth/signup')
       .send({
+        name: 'Test Creator',
         email: 'test-creator@example.com',
         password: 'TestPass123!',
-        username: 'testcreator',
-      });
+      })
+      .expect(201);
 
     token = signupRes.body.accessToken;
     userId = signupRes.body.user.id;

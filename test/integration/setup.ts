@@ -41,6 +41,7 @@ export async function createIntegrationApp(): Promise<IntegrationApp> {
   process.env.JWT_SECRET = 'integration-test-jwt-secret';
   process.env.JWT_EXPIRES_IN = '1h';
   process.env.NODE_ENV = 'test';
+  process.env.THROTTLE_ENABLED = 'false';
 
   const module = await Test.createTestingModule({
     imports: [AppModule],
