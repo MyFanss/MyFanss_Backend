@@ -11,6 +11,7 @@ import {
   Query,
   Header,
   HttpCode,
+  ForbiddenException,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dtos/createUser.dto';
@@ -20,6 +21,10 @@ import { GetUsersQueryDto } from './dtos/get-users-query.dto';
 import { PaginatedResponseDto } from './dtos/paginated-response.dto';
 import { UpdateUserDto } from './dtos/updateUser.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../auth/enums/role.enum';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import {
   ApiTags,
   ApiOperation,
@@ -28,24 +33,20 @@ import {
   ApiParam,
   ApiQuery,
   ApiBody,
+  ApiForbiddenResponse,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-
-interface CurrentUser {
-  id: number;
-  email: string;
-  role: string;
-  orgId?: number;
-}
 
 @ApiTags('Users')
 @ApiBearerAuth('JWT-auth')
 @Controller('users')
-@UseGuards(JwtAuthGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new user' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Create a new user (admin only)' })
   @ApiResponse({
     status: 201,
     description: 'User successfully created',
@@ -55,7 +56,8 @@ export class UsersController {
     status: 409,
     description: 'User already exists with this email',
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  @ApiForbiddenResponse({ description: 'Insufficient role' })
   async createUser(
     @Body() createUserDto: CreateUserDto,
   ): Promise<UserResponseDto> {
@@ -71,7 +73,7 @@ export class UsersController {
     type: UserResponseDto,
   })
   @ApiResponse({ status: 404, description: 'User not found' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   async getUser(@Param('id') id: number): Promise<UserResponseDto> {
     return this.usersService.getUserById(id);
   }
@@ -89,7 +91,7 @@ export class UsersController {
       - Response includes next 'cursor' for pagination
 
       Filtering:
-      - 'role': admin, manager, user (comma-separated)
+      - 'role': fan, creator, admin (comma-separated)
       - 'status': active, inactive, suspended (comma-separated)
       - 'org_id': organization IDs (comma-separated)
       - 'created_from', 'created_to': ISO date strings
@@ -126,14 +128,13 @@ export class UsersController {
   @ApiQuery({
     name: 'role',
     required: false,
-    description: 'Filter by roles (comma-separated: admin, manager, user)',
+    description: 'Filter by role (fan, creator, admin)',
     type: String,
   })
   @ApiQuery({
     name: 'status',
     required: false,
-    description:
-      'Filter by status (comma-separated: active, inactive, suspended)',
+    description: 'Filter by status (active, inactive, suspended)',
     type: String,
   })
   @ApiQuery({
@@ -200,29 +201,32 @@ export class UsersController {
   @Header('X-Has-Next-Page', 'true')
   async getAllUsers(
     @Query() query: GetUsersQueryDto,
+    @CurrentUser()
+    currentUser?: {
+      userId: number;
+      email: string;
+      role: string;
+      orgId?: number;
+    },
   ): Promise<PaginatedResponseDto<UserResponseDto>> {
-    // Extract user from request (would come from JWT in real implementation)
-    const currentUser: CurrentUser | undefined = {
-      id: 1,
-      email: 'admin@example.com',
-      role: 'admin',
-      orgId: 1,
-    };
-
     return this.usersService.getAllUsers(query, currentUser);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete user by ID' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Delete user by ID (admin only)' })
   @ApiParam({ name: 'id', description: 'User ID' })
   @ApiResponse({ status: 200, description: 'User deleted successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  @ApiForbiddenResponse({ description: 'Insufficient role' })
   async deleteUser(@Param('id') id: number): Promise<string> {
     return this.usersService.deleteUser(id);
   }
 
   @Put(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Update user by ID' })
   @ApiParam({ name: 'id', description: 'User ID' })
   @ApiResponse({
@@ -231,15 +235,33 @@ export class UsersController {
     type: UserResponseDto,
   })
   @ApiResponse({ status: 404, description: 'User not found' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  @ApiForbiddenResponse({ description: 'Insufficient role' })
   async updateUser(
     @Param('id') id: number,
     @Body() updateUserDto: UpdateUserDto,
+    @CurrentUser()
+    currentUser?: { userId: number; email: string; role: string },
   ): Promise<UserResponseDto> {
-    return this.usersService.updateUser(id, updateUserDto);
+    const isOwner = currentUser && currentUser.userId === Number(id);
+    const isAdmin = currentUser && currentUser.role === UserRole.ADMIN;
+
+    if (!isOwner && !isAdmin) {
+      throw new ForbiddenException({
+        message: 'You can only update your own profile',
+        code: 'INSUFFICIENT_ROLE',
+      });
+    }
+
+    const { role: _role, ...safeUpdate } = updateUserDto as Record<
+      string,
+      unknown
+    >;
+    return this.usersService.updateUser(id, safeUpdate as UpdateUserDto);
   }
 
   @Patch(':id/profile')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Partially update user profile fields' })
   @ApiParam({ name: 'id', description: 'User ID' })
   @ApiBody({ type: UpdateProfileDto })
@@ -253,11 +275,23 @@ export class UsersController {
     description: 'Validation error (e.g. bio too long, invalid URL)',
   })
   @ApiResponse({ status: 404, description: 'User not found' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   async updateProfile(
     @Param('id') id: number,
     @Body() updateProfileDto: UpdateProfileDto,
+    @CurrentUser()
+    currentUser?: { userId: number; email: string; role: string },
   ): Promise<UserResponseDto> {
+    const isOwner = currentUser && currentUser.userId === Number(id);
+    const isAdmin = currentUser && currentUser.role === UserRole.ADMIN;
+
+    if (!isOwner && !isAdmin) {
+      throw new ForbiddenException({
+        message: 'You can only update your own profile',
+        code: 'INSUFFICIENT_ROLE',
+      });
+    }
+
     return this.usersService.updateProfile(id, updateProfileDto);
   }
 }

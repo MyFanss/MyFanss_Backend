@@ -3,10 +3,11 @@ import { UsersService } from '../users/users.service';
 import { SignupDto } from './dto/signup.dto';
 import { TokenService, TokenPair } from './token.service';
 import { RefreshToken } from './entities/refresh-token.entity';
+import { UserRole } from './enums/role.enum';
 import * as bcrypt from 'bcrypt';
 
 export interface AuthResponse extends TokenPair {
-  user: { id: number; name: string; email: string };
+  user: { id: number; name: string; email: string; role: UserRole };
   message?: string;
 }
 
@@ -14,7 +15,7 @@ export interface AuthenticatedUser {
   id: number;
   name: string;
   email: string;
-  role?: string;
+  role: UserRole;
 }
 
 @Injectable()
@@ -34,7 +35,7 @@ export class AuthService {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role ?? 'user',
+        role: (user.role as UserRole) ?? UserRole.FAN,
       };
     }
     return null;
@@ -51,14 +52,17 @@ export class AuthService {
     const tokens = await this.tokenService.issueTokenPair(
       user.id,
       user.email,
-      {
-        ...opts,
-        role: user.role ?? 'user',
-      },
+      (user.role as UserRole) ?? UserRole.FAN,
+      opts,
     );
     return {
       ...tokens,
-      user: { id: user.id, name: user.name, email: user.email },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: (user.role as UserRole) ?? UserRole.FAN,
+      },
       message: userResponse.message,
     };
   }
@@ -70,14 +74,17 @@ export class AuthService {
     const tokens = await this.tokenService.issueTokenPair(
       user.id,
       user.email,
-      {
-        ...opts,
-        role: user.role ?? 'user',
-      },
+      user.role,
+      opts,
     );
     return {
       ...tokens,
-      user: { id: user.id, name: user.name, email: user.email },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
     };
   }
 

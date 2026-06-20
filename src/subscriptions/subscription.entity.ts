@@ -1,33 +1,43 @@
-import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { User } from '../users/user.entity';
 
-@Entity('subscriptions')
-@Index(['creatorId'])
-@Index(['subscriberId'])
-@Index(['status'])
-export class Subscription {
-  @PrimaryGeneratedColumn('identity')
-  id: number;
+export type SubscriptionStatus = 'active' | 'cancelled';
 
-  @Column({ type: 'int', name: 'creator_id' })
+@Entity('subscriptions')
+// One row per fan+creator pair. Re-subscribing reactivates the same row, so a
+// plain unique constraint on the pair also guarantees a single active row.
+@Index(['fanId', 'creatorId'], { unique: true })
+@Index(['creatorId', 'status'])
+@Index(['fanId', 'status'])
+export class Subscription {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ type: 'int' })
+  fanId: number;
+
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  fan: User;
+
+  @Column({ type: 'int' })
   creatorId: number;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'creator_id' })
   creator: User;
 
-  @Column({ type: 'int', name: 'subscriber_id' })
-  subscriberId: number;
-
   @Column({ type: 'varchar', default: 'active' })
-  status: string;
+  status: SubscriptionStatus;
 
-  @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
-  createdAt: Date;
+  @CreateDateColumn({ type: 'timestamp' })
+  subscribedAt: Date;
 
-  @Column({ type: 'timestamp', name: 'cancelled_at', nullable: true })
-  cancelledAt?: Date | null;
-
-  @Column({ type: 'varchar', nullable: true })
-  referrer?: string | null;
+  @Column({ type: 'timestamp', nullable: true })
+  cancelledAt: Date | null;
 }

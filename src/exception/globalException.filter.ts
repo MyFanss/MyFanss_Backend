@@ -3,9 +3,22 @@ import {
   Catch,
   ExceptionFilter,
   HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { AppLogger } from '../logger/app-logger.service';
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const ThrottlerException: new (...args: any[]) => HttpException =
+  (() => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const mod = require('@nestjs/throttler');
+      return mod.ThrottlerException;
+    } catch {
+      return null;
+    }
+  })();
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -16,30 +29,46 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const response = caughtException.getResponse<Response>();
     const request = caughtException.getRequest<Request>();
 
+    // Normalise ThrottlerException (429) to HttpException for consistent handling
+    let normalized = exception;
+    if (
+      ThrottlerException &&
+      exception instanceof ThrottlerException
+    ) {
+      normalized = new HttpException(
+        {
+          statusCode: HttpStatus.TOO_MANY_REQUESTS,
+          message: 'Too many requests, please try again later',
+          error: 'ThrottlerException',
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
     const status =
-      exception instanceof HttpException ? exception.getStatus() : 500;
+      normalized instanceof HttpException ? normalized.getStatus() : 500;
 
     let message: string | string[] =
       'An error occurred | internal server error';
     let error =
-      exception instanceof HttpException
-        ? exception.name
-        : ((exception as Error)?.name ?? 'UnknownError');
+      normalized instanceof HttpException
+        ? normalized.name
+        : ((normalized as Error)?.name ?? 'UnknownError');
     let code: string | undefined;
 
-    if (exception instanceof HttpException) {
-      const exResponse = exception.getResponse();
+    if (normalized instanceof HttpException) {
+      const exResponse = normalized.getResponse();
       if (typeof exResponse === 'object' && exResponse !== null) {
         const responseBody = exResponse as Record<string, unknown>;
         message =
           (responseBody.message as string | string[] | undefined) ??
-          exception.message;
+          normalized.message;
         error = (responseBody.error as string | undefined) ?? error;
         code = responseBody.code as string | undefined;
       } else if (typeof exResponse === 'string') {
         message = exResponse;
       } else {
-        message = exception.message;
+        message = normalized.message;
       }
     }
 
@@ -48,7 +77,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     this.logger.error(
       `[${request.method}] ${request.url} ${status} - ${errorMessage}`,
-      exception instanceof Error ? exception.stack : '',
+      normalized instanceof Error ? normalized.stack : '',
       GlobalExceptionFilter.name,
     );
 

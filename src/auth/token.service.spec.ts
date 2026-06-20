@@ -62,7 +62,11 @@ describe('TokenService', () => {
       jwtService.sign.mockReturnValue('signed-token');
       repo.save.mockResolvedValue({});
 
-      const result = await service.issueTokenPair(1, 'test@test.com');
+      const result = await service.issueTokenPair(
+        1,
+        'test@test.com',
+        'fan' as any,
+      );
 
       expect(result.accessToken).toBe('signed-token');
       expect(result.refreshToken).toBe('signed-token');
@@ -75,7 +79,7 @@ describe('TokenService', () => {
       jwtService.sign.mockReturnValue('raw-refresh');
       repo.save.mockResolvedValue({});
 
-      await service.issueTokenPair(1, 'test@test.com');
+      await service.issueTokenPair(1, 'test@test.com', 'fan' as any);
 
       const savedArg = repo.save.mock.calls[0][0];
       expect(savedArg.tokenHash).toBeDefined();
@@ -88,7 +92,7 @@ describe('TokenService', () => {
       jwtService.sign.mockReturnValue('t');
       repo.save.mockResolvedValue({});
 
-      await service.issueTokenPair(1, 'a@b.com', {
+      await service.issueTokenPair(1, 'a@b.com', 'fan' as any, {
         deviceId: 'dev-1',
         userAgent: 'Mozilla',
         ipAddress: '1.2.3.4',

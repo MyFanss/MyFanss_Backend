@@ -1,6 +1,8 @@
 import { ConfigService } from '@nestjs/config';
 import { User } from 'src/users/user.entity';
-import { RefreshToken } from 'src/auth/entities/refresh-token.entity';import { Subscription } from '../subscriptions/subscription.entity';import { DataSourceOptions } from 'typeorm';
+import { RefreshToken } from 'src/auth/entities/refresh-token.entity';
+import { Subscription } from 'src/subscriptions/subscription.entity';
+import { DataSourceOptions } from 'typeorm';
 
 export function dataOption(configService: ConfigService): DataSourceOptions {
   return {
