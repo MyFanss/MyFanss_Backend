@@ -36,6 +36,7 @@ import { AdminModule } from './admin/admin.module';
     HealthModule,
     AuthModule,
     SubscriptionsModule,
+    AuditModule,
   ],
   controllers: [AppController],
   providers: [AppService],

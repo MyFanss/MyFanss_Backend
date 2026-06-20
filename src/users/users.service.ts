@@ -22,6 +22,8 @@ import {
 import { UsersQueryService } from './services/users-query.service';
 import { SearchService } from './services/search.service';
 import { PermissionService, JwtPayload } from './services/permission.service';
+import { AuditService } from '../audit/audit.service';
+import { AuditAction } from '../audit/audit-action.enum';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import * as bcrypt from 'bcrypt';
@@ -38,6 +40,7 @@ export class UsersService {
     private readonly queryService: UsersQueryService,
     private readonly searchService: SearchService,
     private readonly permissionService: PermissionService,
+    private readonly auditService: AuditService,
     @Inject(CACHE_MANAGER)
     private cacheManager: Cache,
     private readonly logger: AppLogger,
@@ -86,7 +89,7 @@ export class UsersService {
   }
 
   async createUser(createUserDto: CreateUserDto): Promise<UserResponseDto> {
-    let searchUser: User | null = await this.getUserByEmail(
+    const searchUser: User | null = await this.getUserByEmail(
       createUserDto.email,
     );
 
@@ -101,11 +104,11 @@ export class UsersService {
       saltRounds,
     );
 
-    let user: User = plainToInstance(User, {
+    const user: User = plainToInstance(User, {
       ...createUserDto,
       password: hashedPassword,
     });
-    let savedUser: User = await this.userRepository.save(user);
+    const savedUser: User = await this.userRepository.save(user);
 
     // Update search text and invalidate caches
     await this.searchService.updateSearchTextForUser(savedUser.id);
@@ -133,7 +136,7 @@ export class UsersService {
   }
 
   async getUserById(id: number): Promise<UserResponseDto> {
-    let user: User | null = await this.findById(id);
+    const user: User | null = await this.findById(id);
     if (!user) {
       throw new NotFoundException('user not found');
     }
@@ -142,8 +145,8 @@ export class UsersService {
     });
   }
 
-  async deleteUser(id: number): Promise<string> {
-    let user: User | null = await this.findById(id);
+  async deleteUser(id: number, actorId?: number): Promise<string> {
+    const user: User | null = await this.findById(id);
     if (!user) {
       throw new NotFoundException('user not found');
     }
@@ -152,6 +155,14 @@ export class UsersService {
     await this.userRepository.update(id, { is_deleted: true });
     await this.invalidateUserRelatedCaches(id);
 
+    void this.auditService.log({
+      actorId: actorId ?? null,
+      action: AuditAction.USER_DELETED,
+      targetType: 'User',
+      targetId: id,
+      metadata: { email: user.email },
+    });
+
     return 'user deleted successfully...';
   }
 
@@ -159,7 +170,7 @@ export class UsersService {
     id: number,
     updateUserDto: UpdateUserDto,
   ): Promise<UserResponseDto> {
-    let user: User | null = await this.findById(id);
+    const user: User | null = await this.findById(id);
     if (!user) {
       throw new NotFoundException('user not found');
     }
@@ -172,7 +183,7 @@ export class UsersService {
     }
 
     Object.assign(user, updatePayload);
-    let savedUser: User = await this.userRepository.save(user);
+    const savedUser: User = await this.userRepository.save(user);
 
     if (passwordChanged) {
       await this.refreshTokenRepository.update(
@@ -192,6 +203,39 @@ export class UsersService {
         excludeExtraneousValues: true,
       },
     );
+  }
+
+  async changeUserRole(
+    id: number,
+    newRole: string,
+    actorId: number,
+  ): Promise<UserResponseDto> {
+    const user: User | null = await this.findById(id);
+    if (!user) {
+      throw new NotFoundException('user not found');
+    }
+
+    const oldRole = user.role;
+    if (oldRole === newRole) {
+      return plainToInstance(UserResponseDto, user, {
+        excludeExtraneousValues: true,
+      });
+    }
+
+    await this.userRepository.update(id, { role: newRole });
+    user.role = newRole;
+
+    void this.auditService.log({
+      actorId,
+      action: AuditAction.USER_ROLE_CHANGED,
+      targetType: 'User',
+      targetId: id,
+      metadata: { before: oldRole, after: newRole },
+    });
+
+    return plainToInstance(UserResponseDto, user, {
+      excludeExtraneousValues: true,
+    });
   }
 
   async updateProfile(

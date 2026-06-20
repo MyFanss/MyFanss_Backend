@@ -4,6 +4,7 @@ import { UsersService } from './users.service';
 import { GetUsersQueryDto } from './dtos/get-users-query.dto';
 import { PaginatedResponseDto } from './dtos/paginated-response.dto';
 import { UserResponseDto } from './dtos/userResponse.dto';
+import { AdminGuard } from '../audit/admin.guard';
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -22,10 +23,14 @@ describe('UsersController', () => {
             updateUser: jest.fn(),
             updateProfile: jest.fn(),
             deleteUser: jest.fn(),
+            changeUserRole: jest.fn(),
           },
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(AdminGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<UsersController>(UsersController);
     service = module.get<UsersService>(UsersService);
@@ -251,15 +256,42 @@ describe('UsersController', () => {
   });
 
   describe('deleteUser', () => {
-    it('should delete a user', async () => {
+    it('should delete a user with actorId from request', async () => {
       const message = 'user deleted successfully...';
+      const mockReq = {
+        user: { userId: 1, email: 'admin@test.com', username: 'admin' },
+      } as any;
 
       (service.deleteUser as jest.Mock).mockResolvedValue(message);
 
-      const result = await controller.deleteUser(1);
+      const result = await controller.deleteUser(1, mockReq);
 
       expect(result).toBe(message);
-      expect(service.deleteUser).toHaveBeenCalledWith(1);
+      expect(service.deleteUser).toHaveBeenCalledWith(1, 1);
+    });
+  });
+
+  describe('changeUserRole', () => {
+    it('should change user role and return updated user', async () => {
+      const mockReq = {
+        user: { userId: 1, email: 'admin@test.com', username: 'admin' },
+      } as any;
+      const mockResult: UserResponseDto = {
+        id: 2,
+        name: 'Jane Doe',
+        email: 'jane@example.com',
+        role: 'admin',
+        status: 'active',
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+
+      (service.changeUserRole as jest.Mock).mockResolvedValue(mockResult);
+
+      const result = await controller.changeUserRole(2, 'admin', mockReq);
+
+      expect(result).toEqual(mockResult);
+      expect(service.changeUserRole).toHaveBeenCalledWith(2, 'admin', 1);
     });
   });
 
