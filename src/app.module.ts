@@ -28,6 +28,7 @@ import { AdminModule } from './admin/admin.module';
       }),
       inject: [ConfigService],
     }),
+    ThrottleConfigModule,
     UsersModule,
     LoggerModule,
     MonitoringModule,
@@ -36,6 +37,6 @@ import { AdminModule } from './admin/admin.module';
     SubscriptionsModule,
   ],
   controllers: [AppController],
-  providers: [AppService, RateLimitService],
+  providers: [AppService],
 })
 export class AppModule {}
