@@ -83,7 +83,8 @@ describe('CreatorAnalyticsService', () => {
       { referrer: 'email', count: '1' },
     ];
 
-    const getRawManyMock = jest.fn()
+    const getRawManyMock = jest
+      .fn()
       .mockResolvedValueOnce(activeCount)
       .mockResolvedValueOnce(newCount)
       .mockResolvedValueOnce(churnCount)

@@ -23,9 +23,8 @@ export class CreatorAnalyticsService {
     days: number,
   ): Promise<CreatorAnalyticsResponseDto> {
     const cacheKey = `creator-analytics:${creatorId}:${days}`;
-    const cached = await this.cacheManager.get<CreatorAnalyticsResponseDto>(
-      cacheKey,
-    );
+    const cached =
+      await this.cacheManager.get<CreatorAnalyticsResponseDto>(cacheKey);
     if (cached) {
       this.logger.debug(
         `Cache hit for creator analytics creatorId=${creatorId} days=${days}`,

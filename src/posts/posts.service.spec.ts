@@ -83,7 +83,10 @@ describe('PostsService', () => {
         visibility: 'public' as const,
       };
 
-      const postWithMedia = { ...mockPost, mediaUrl: 'https://example.com/image.jpg' };
+      const postWithMedia = {
+        ...mockPost,
+        mediaUrl: 'https://example.com/image.jpg',
+      };
       mockPostsRepo.create.mockReturnValue(postWithMedia);
       mockPostsRepo.save.mockResolvedValue(postWithMedia);
 
@@ -137,7 +140,10 @@ describe('PostsService', () => {
     });
 
     it('should return all posts for subscribers', async () => {
-      const allPosts = [mockPost, { ...mockPost, id: 2, visibility: 'subscribers' }];
+      const allPosts = [
+        mockPost,
+        { ...mockPost, id: 2, visibility: 'subscribers' },
+      ];
       mockPostsRepo.createQueryBuilder.mockReturnValue({
         where: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
@@ -169,17 +175,17 @@ describe('PostsService', () => {
     it('should throw ForbiddenException if not owner', async () => {
       mockPostsRepo.findOne.mockResolvedValue(mockPost);
 
-      await expect(service.updatePost(1, 999, { title: 'Updated Title' }))
-        .rejects
-        .toThrow(ForbiddenException);
+      await expect(
+        service.updatePost(1, 999, { title: 'Updated Title' }),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw NotFoundException if post does not exist', async () => {
       mockPostsRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.updatePost(999, 1, { title: 'Updated Title' }))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(
+        service.updatePost(999, 1, { title: 'Updated Title' }),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

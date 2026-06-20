@@ -4,18 +4,14 @@ import { ThrottlerModule, ThrottlerModuleOptions } from '@nestjs/throttler';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ExtendedThrottlerGuard } from './extended-throttler-guard';
 import { buildThrottlerModuleOptions } from './throttle.config';
-import {
-  makeCounterProvider,
-} from '@willsoto/nestjs-prometheus';
+import { makeCounterProvider } from '@willsoto/nestjs-prometheus';
 
 @Module({
   imports: [
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (
-        configService: ConfigService,
-      ): ThrottlerModuleOptions => {
+      useFactory: (configService: ConfigService): ThrottlerModuleOptions => {
         return buildThrottlerModuleOptions(configService);
       },
     }),

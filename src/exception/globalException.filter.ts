@@ -9,16 +9,15 @@ import { Request, Response } from 'express';
 import { AppLogger } from '../logger/app-logger.service';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const ThrottlerException: new (...args: any[]) => HttpException =
-  (() => {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const mod = require('@nestjs/throttler');
-      return mod.ThrottlerException;
-    } catch {
-      return null;
-    }
-  })();
+const ThrottlerException: new (...args: any[]) => HttpException = (() => {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mod = require('@nestjs/throttler');
+    return mod.ThrottlerException;
+  } catch {
+    return null;
+  }
+})();
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -31,10 +30,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     // Normalise ThrottlerException (429) to HttpException for consistent handling
     let normalized = exception;
-    if (
-      ThrottlerException &&
-      exception instanceof ThrottlerException
-    ) {
+    if (ThrottlerException && exception instanceof ThrottlerException) {
       normalized = new HttpException(
         {
           statusCode: HttpStatus.TOO_MANY_REQUESTS,

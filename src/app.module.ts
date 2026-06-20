@@ -5,6 +5,8 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { CreatorsModule } from './creators/creators.module';
+import { PostsModule } from './posts/posts.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CacheModule } from '@nestjs/cache-manager';
@@ -12,8 +14,8 @@ import { dataOption } from './migrations/appDataSource.db';
 import { LoggerModule } from './logger/logger.module';
 import { MonitoringModule } from './monitoring/monitoring.module';
 import { HealthModule } from './monitoring/health.module';
-import { CreatorsModule } from './creators/creators.module';
-import { RateLimitService } from './common/services/rate-limit.service';
+import { ThrottleConfigModule } from './common/throttle/throttle.module';
+import { AuditModule } from './audit/audit.module';
 import { AdminModule } from './admin/admin.module';
 
 @Module({
@@ -37,7 +39,11 @@ import { AdminModule } from './admin/admin.module';
     HealthModule,
     AuthModule,
     SubscriptionsModule,
+    CreatorsModule,
+    PostsModule,
+    NotificationsModule,
     AuditModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

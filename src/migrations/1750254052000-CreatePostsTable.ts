@@ -1,4 +1,10 @@
-import { MigrationInterface, QueryRunner, Table, TableForeignKey, TableIndex } from 'typeorm';
+import {
+  MigrationInterface,
+  QueryRunner,
+  Table,
+  TableForeignKey,
+  TableIndex,
+} from 'typeorm';
 
 export class CreatePostsTable1750254052000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -98,7 +104,7 @@ export class CreatePostsTable1750254052000 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     const table = await queryRunner.getTable('posts');
-    
+
     if (table) {
       const foreignKey = table.foreignKeys.find(
         (fk) => fk.columnNames.indexOf('creatorId') !== -1,

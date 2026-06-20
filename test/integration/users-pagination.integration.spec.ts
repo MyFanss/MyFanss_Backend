@@ -37,7 +37,11 @@ describe('Users Pagination (integration)', () => {
     for (let i = 1; i <= count; i++) {
       await request(ctx.app.getHttpServer())
         .post('/auth/signup')
-        .send({ name: `User ${i}`, email: `user${i}@test.com`, password: PASSWORD });
+        .send({
+          name: `User ${i}`,
+          email: `user${i}@test.com`,
+          password: PASSWORD,
+        });
     }
   }
 
@@ -107,7 +111,10 @@ describe('Users Pagination (integration)', () => {
 
   it('filters users by status', async () => {
     await seedUsers(3);
-    await ctx.userRepo.update({ email: 'user2@test.com' }, { status: 'suspended' });
+    await ctx.userRepo.update(
+      { email: 'user2@test.com' },
+      { status: 'suspended' },
+    );
 
     const res = await request(ctx.app.getHttpServer())
       .get('/users?status=suspended')
@@ -130,19 +137,27 @@ describe('Users Pagination (integration)', () => {
   });
 
   it('searches users by name', async () => {
-    await request(ctx.app.getHttpServer())
-      .post('/auth/signup')
-      .send({ name: 'Unique Name', email: 'unique@test.com', password: PASSWORD });
-    await request(ctx.app.getHttpServer())
-      .post('/auth/signup')
-      .send({ name: 'Other Person', email: 'other@test.com', password: PASSWORD });
+    await request(ctx.app.getHttpServer()).post('/auth/signup').send({
+      name: 'Unique Name',
+      email: 'unique@test.com',
+      password: PASSWORD,
+    });
+    await request(ctx.app.getHttpServer()).post('/auth/signup').send({
+      name: 'Other Person',
+      email: 'other@test.com',
+      password: PASSWORD,
+    });
 
     const res = await request(ctx.app.getHttpServer())
       .get('/users?search=Unique')
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
 
-    expect(res.body.data.some((u: { name: string }) => u.name === 'Unique Name')).toBe(true);
-    expect(res.body.data.every((u: { name: string }) => u.name !== 'Other Person')).toBe(true);
+    expect(
+      res.body.data.some((u: { name: string }) => u.name === 'Unique Name'),
+    ).toBe(true);
+    expect(
+      res.body.data.every((u: { name: string }) => u.name !== 'Other Person'),
+    ).toBe(true);
   });
 });

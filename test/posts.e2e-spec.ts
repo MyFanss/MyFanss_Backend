@@ -388,8 +388,9 @@ describe('Posts (e2e)', () => {
     });
 
     it('should require authentication', async () => {
-      const res = await request(app.getHttpServer())
-        .delete(`/creators/me/posts/${deletePostId}`);
+      const res = await request(app.getHttpServer()).delete(
+        `/creators/me/posts/${deletePostId}`,
+      );
 
       expect(res.status).toBe(401);
     });

@@ -14,7 +14,10 @@ import { TIERS } from './throttle.config';
 
 export const RATE_LIMIT_TIER_KEY = 'rate_limit_tier';
 
-export function getTierName(context: ExecutionContext, reflector: Reflector): string | undefined {
+export function getTierName(
+  context: ExecutionContext,
+  reflector: Reflector,
+): string | undefined {
   return reflector.getAllAndOverride<string>(RATE_LIMIT_TIER_KEY, [
     context.getHandler(),
     context.getClass(),
@@ -84,14 +87,28 @@ export class ExtendedThrottlerGuard extends ThrottlerGuard {
    * - Set Retry-After header on violation
    */
   async handleRequest(requestProps: ThrottlerRequest): Promise<boolean> {
-    const { context, limit, ttl, throttler, blockDuration, getTracker, generateKey } = requestProps;
+    const {
+      context,
+      limit,
+      ttl,
+      throttler,
+      blockDuration,
+      getTracker,
+      generateKey,
+    } = requestProps;
     const { req, res } = this.getRequestResponse(context);
 
     const tracker = await getTracker(req, context);
     const key = generateKey(context, tracker, throttler.name ?? 'default');
 
     const { totalHits, timeToExpire, isBlocked, timeToBlockExpire } =
-      await this.storageService.increment(key, ttl, limit, blockDuration, throttler.name ?? 'default');
+      await this.storageService.increment(
+        key,
+        ttl,
+        limit,
+        blockDuration,
+        throttler.name ?? 'default',
+      );
 
     if (isBlocked) {
       res.header('Retry-After', timeToBlockExpire);
@@ -129,4 +146,3 @@ export class ExtendedThrottlerGuard extends ThrottlerGuard {
     return 'Too many requests, please try again later';
   }
 }
-

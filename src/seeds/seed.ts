@@ -3,7 +3,17 @@ import { config } from 'dotenv';
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from '../users/user.entity';
-import { Subscription } from '../subscriptions/subscription.entity';
+import {
+  Subscription,
+  SubscriptionStatus,
+} from '../subscriptions/subscription.entity';
+
+type SeedSubscription = {
+  creatorId: number;
+  fanId: number;
+  status: SubscriptionStatus;
+  cancelledAt?: Date;
+};
 
 config();
 
@@ -24,8 +34,18 @@ const dataSource = new DataSource({
 });
 
 const SEED_USERS = [
-  { name: 'Fan One', email: 'fan1@dev.local', password: 'Fan1Pass!', role: 'fan' },
-  { name: 'Fan Two', email: 'fan2@dev.local', password: 'Fan2Pass!', role: 'fan' },
+  {
+    name: 'Fan One',
+    email: 'fan1@dev.local',
+    password: 'Fan1Pass!',
+    role: 'fan',
+  },
+  {
+    name: 'Fan Two',
+    email: 'fan2@dev.local',
+    password: 'Fan2Pass!',
+    role: 'fan',
+  },
   {
     name: 'Creator One',
     email: 'creator1@dev.local',
@@ -38,7 +58,12 @@ const SEED_USERS = [
     password: 'Creator2Pass!',
     role: 'creator',
   },
-  { name: 'Admin', email: 'admin@dev.local', password: 'AdminPass!', role: 'admin' },
+  {
+    name: 'Admin',
+    email: 'admin@dev.local',
+    password: 'AdminPass!',
+    role: 'admin',
+  },
 ];
 
 async function seed() {
@@ -76,34 +101,26 @@ async function seed() {
   const fanTwo = await repo.findOneBy({ email: 'fan2@dev.local' });
 
   if (creatorOne && creatorTwo && fanOne && fanTwo) {
-    const seedSubscriptions = [
+    const seedSubscriptions: SeedSubscription[] = [
       {
         creatorId: creatorOne.id,
-        subscriberId: fanOne.id,
+        fanId: fanOne.id,
         status: 'active',
-        referrer: 'social',
-        createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
       },
       {
         creatorId: creatorOne.id,
-        subscriberId: fanTwo.id,
+        fanId: fanTwo.id,
         status: 'active',
-        referrer: 'friend',
-        createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
       },
       {
         creatorId: creatorTwo.id,
-        subscriberId: fanOne.id,
+        fanId: fanOne.id,
         status: 'active',
-        referrer: 'search',
-        createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
       },
       {
         creatorId: creatorOne.id,
-        subscriberId: fanTwo.id,
+        fanId: fanTwo.id,
         status: 'cancelled',
-        referrer: 'friend',
-        createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
         cancelledAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
       },
     ];
@@ -111,11 +128,11 @@ async function seed() {
     for (const subs of seedSubscriptions) {
       const exists = await subscriptionRepo.findOneBy({
         creatorId: subs.creatorId,
-        subscriberId: subs.subscriberId,
+        fanId: subs.fanId,
         status: subs.status,
       });
       if (!exists) {
-        await subscriptionRepo.save(subscriptionRepo.create(subs as any));
+        await subscriptionRepo.save(subscriptionRepo.create(subs));
       }
     }
   }

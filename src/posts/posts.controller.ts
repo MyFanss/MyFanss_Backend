@@ -56,7 +56,9 @@ export class PostsController {
   @Get('me/posts')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Get all posts by authenticated creator (paginated)' })
+  @ApiOperation({
+    summary: 'Get all posts by authenticated creator (paginated)',
+  })
   @ApiResponse({ status: 200, description: 'Posts retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiQuery({ name: 'page', required: false, example: 1 })
@@ -102,7 +104,10 @@ export class PostsController {
   @ApiOperation({ summary: 'Update an existing post' })
   @ApiResponse({ status: 200, description: 'Post updated successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Cannot edit another creator\'s post' })
+  @ApiResponse({
+    status: 403,
+    description: "Cannot edit another creator's post",
+  })
   @ApiResponse({ status: 404, description: 'Post not found' })
   @ApiParam({ name: 'id', description: 'Post ID' })
   async updatePost(
@@ -120,7 +125,10 @@ export class PostsController {
   @ApiOperation({ summary: 'Delete a post' })
   @ApiResponse({ status: 204, description: 'Post deleted successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Cannot delete another creator\'s post' })
+  @ApiResponse({
+    status: 403,
+    description: "Cannot delete another creator's post",
+  })
   @ApiResponse({ status: 404, description: 'Post not found' })
   @ApiParam({ name: 'id', description: 'Post ID' })
   async deletePost(

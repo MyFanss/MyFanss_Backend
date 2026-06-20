@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Post } from './post.entity';
@@ -99,7 +103,7 @@ export class PostsService {
 
     if (!post) throw new NotFoundException('Post not found');
     if (post.creatorId !== creatorId)
-      throw new ForbiddenException('Cannot edit another creator\'s post');
+      throw new ForbiddenException("Cannot edit another creator's post");
 
     Object.assign(post, dto);
     const updated = await this.postsRepo.save(post);
@@ -111,7 +115,7 @@ export class PostsService {
 
     if (!post) throw new NotFoundException('Post not found');
     if (post.creatorId !== creatorId)
-      throw new ForbiddenException('Cannot delete another creator\'s post');
+      throw new ForbiddenException("Cannot delete another creator's post");
 
     await this.postsRepo.remove(post);
   }

@@ -31,7 +31,11 @@ describe('User Sessions (integration)', () => {
     await clearAll(ctx.dataSource);
   });
 
-  async function signup(): Promise<{ accessToken: string; refreshToken: string; userId: number }> {
+  async function signup(): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    userId: number;
+  }> {
     const res = await request(ctx.app.getHttpServer())
       .post('/auth/signup')
       .send({ name: NAME, email: EMAIL, password: PASSWORD })
@@ -43,24 +47,34 @@ describe('User Sessions (integration)', () => {
     };
   }
 
-  async function login(): Promise<{ accessToken: string; refreshToken: string }> {
+  async function login(): Promise<{
+    accessToken: string;
+    refreshToken: string;
+  }> {
     const res = await request(ctx.app.getHttpServer())
       .post('/auth/login')
       .send({ email: EMAIL, password: PASSWORD })
       .expect(200);
-    return { accessToken: res.body.accessToken, refreshToken: res.body.refreshToken };
+    return {
+      accessToken: res.body.accessToken,
+      refreshToken: res.body.refreshToken,
+    };
   }
 
   it('signup persists a refresh token row in the database', async () => {
     const { userId } = await signup();
-    const tokens = await ctx.tokenRepo.find({ where: { userId, isRevoked: false } });
+    const tokens = await ctx.tokenRepo.find({
+      where: { userId, isRevoked: false },
+    });
     expect(tokens.length).toBe(1);
   });
 
   it('login creates an additional session without invalidating the signup session', async () => {
     const { userId } = await signup();
     await login();
-    const activeSessions = await ctx.tokenRepo.find({ where: { userId, isRevoked: false } });
+    const activeSessions = await ctx.tokenRepo.find({
+      where: { userId, isRevoked: false },
+    });
     expect(activeSessions.length).toBe(2);
   });
 
@@ -92,7 +106,9 @@ describe('User Sessions (integration)', () => {
       .send({ refreshToken })
       .expect(200);
 
-    const activeTokens = await ctx.tokenRepo.find({ where: { userId, isRevoked: false } });
+    const activeTokens = await ctx.tokenRepo.find({
+      where: { userId, isRevoked: false },
+    });
     expect(activeTokens.length).toBe(0);
   });
 
@@ -107,7 +123,9 @@ describe('User Sessions (integration)', () => {
       .set('Authorization', `Bearer ${accessToken}`)
       .expect(200);
 
-    const activeTokens = await ctx.tokenRepo.find({ where: { userId, isRevoked: false } });
+    const activeTokens = await ctx.tokenRepo.find({
+      where: { userId, isRevoked: false },
+    });
     expect(activeTokens.length).toBe(0);
   });
 

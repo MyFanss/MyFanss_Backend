@@ -1,5 +1,11 @@
 import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { CreatorAnalyticsService } from './creator-analytics.service';
 import { CreatorAnalyticsQueryDto } from './dtos/creator-analytics-query.dto';
 import { CreatorAnalyticsResponseDto } from './dtos/creator-analytics-response.dto';
@@ -32,7 +38,10 @@ export class CreatorAnalyticsController {
     type: CreatorAnalyticsResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - creator role required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - creator role required',
+  })
   async getAnalytics(
     @Req() req: CreatorRequest,
     @Query() query: CreatorAnalyticsQueryDto,

@@ -19,7 +19,9 @@ describe('CreatorAnalyticsController', () => {
       ],
     }).compile();
 
-    controller = module.get<CreatorAnalyticsController>(CreatorAnalyticsController);
+    controller = module.get<CreatorAnalyticsController>(
+      CreatorAnalyticsController,
+    );
     service = module.get<CreatorAnalyticsService>(CreatorAnalyticsService);
   });
 

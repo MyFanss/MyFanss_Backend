@@ -29,6 +29,7 @@ import { Cache } from 'cache-manager';
 import * as bcrypt from 'bcrypt';
 import { UserRole } from '../auth/enums/role.enum';
 import { AppLogger } from '../logger/app-logger.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class UsersService {
@@ -44,6 +45,7 @@ export class UsersService {
     @Inject(CACHE_MANAGER)
     private cacheManager: Cache,
     private readonly logger: AppLogger,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async getAllUsers(
