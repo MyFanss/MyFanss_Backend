@@ -3,6 +3,7 @@ import { config } from 'dotenv';
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from '../users/user.entity';
+import { CreatorProfile } from '../creators/creator-profile.entity';
 
 config();
 
@@ -18,7 +19,7 @@ const dataSource = new DataSource({
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  entities: [User],
+  entities: [User, CreatorProfile],
   synchronize: false,
 });
 
@@ -58,6 +59,37 @@ async function seed() {
       repo.create({ name: u.name, email: u.email, password: hashed }),
     );
     console.log(`Seeded: ${u.email}`);
+  }
+
+  // Seed one creator profile for the first creator account.
+  const creatorRepo = dataSource.getRepository(CreatorProfile);
+  const creatorUser = await repo.findOneBy({ email: 'creator1@dev.local' });
+  if (creatorUser) {
+    const handle = 'creator_one';
+    const existingProfile = await creatorRepo.findOne({
+      where: [{ userId: creatorUser.id }, { handle }],
+    });
+    if (existingProfile) {
+      console.log(`Skipped creator profile (already exists): ${handle}`);
+    } else {
+      await creatorRepo.save(
+        creatorRepo.create({
+          userId: creatorUser.id,
+          handle,
+          displayName: 'Creator One',
+          bio: 'Demo creator profile seeded for development.',
+          bannerUrl: 'https://cdn.myfans.dev/banners/creator_one.jpg',
+          category: 'lifestyle',
+          isOnboarded: true,
+        }),
+      );
+      // Keep the seeded account's role consistent with onboarding.
+      if (creatorUser.role !== 'creator') {
+        creatorUser.role = 'creator';
+        await repo.save(creatorUser);
+      }
+      console.log(`Seeded creator profile: ${handle}`);
+    }
   }
 
   await dataSource.destroy();
