@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import * as bcrypt from 'bcrypt';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { AppLogger } from '../logger/app-logger.service';
+import { UserRole } from './enums/role.enum';
 
 export interface TokenPair {
   accessToken: string;
@@ -23,6 +24,7 @@ export interface RefreshPayload {
   type: 'refresh';
   familyId: string;
   tokenId: string;
+  role: UserRole;
 }
 
 export interface AccessPayload {
@@ -30,6 +32,7 @@ export interface AccessPayload {
   email: string;
   jti: string;
   type: 'access';
+  role: UserRole;
 }
 
 type DeviceInfo = {
@@ -54,15 +57,17 @@ export class TokenService {
   async issueTokenPair(
     userId: number,
     email: string,
+    role: UserRole,
     opts: DeviceInfo & { familyId?: string } = {},
   ): Promise<TokenPair> {
-    const tokenPair = await this.createTokenPair(userId, email, opts);
+    const tokenPair = await this.createTokenPair(userId, email, role, opts);
     return this.toPublicTokenPair(tokenPair);
   }
 
   private async createTokenPair(
     userId: number,
     email: string,
+    role: UserRole,
     opts: DeviceInfo & { familyId?: string } = {},
   ): Promise<TokenPair & { tokenId: string }> {
     const jti = randomUUID();
@@ -74,6 +79,7 @@ export class TokenService {
       email,
       jti: randomUUID(),
       type: 'access' as const,
+      role,
     };
     const refreshPayload: Omit<RefreshPayload, 'iat' | 'exp'> = {
       sub: userId,
@@ -82,6 +88,7 @@ export class TokenService {
       type: 'refresh' as const,
       familyId,
       tokenId,
+      role,
     };
 
     const accessSecret = this.getAccessSecret();
@@ -207,12 +214,17 @@ export class TokenService {
       });
     }
 
-    const newPair = await this.createTokenPair(payload.sub, payload.email, {
-      familyId: payload.familyId,
-      deviceId: opts.deviceId ?? stored.deviceId ?? undefined,
-      userAgent: opts.userAgent ?? stored.userAgent ?? undefined,
-      ipAddress: opts.ipAddress ?? stored.ipAddress ?? undefined,
-    });
+    const newPair = await this.createTokenPair(
+      payload.sub,
+      payload.email,
+      payload.role as UserRole,
+      {
+        familyId: payload.familyId,
+        deviceId: opts.deviceId ?? stored.deviceId ?? undefined,
+        userAgent: opts.userAgent ?? stored.userAgent ?? undefined,
+        ipAddress: opts.ipAddress ?? stored.ipAddress ?? undefined,
+      },
+    );
 
     await this.refreshTokenRepo.update(stored.id, {
       isRevoked: true,

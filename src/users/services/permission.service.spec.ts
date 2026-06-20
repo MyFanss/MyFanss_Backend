@@ -20,7 +20,7 @@ describe('PermissionService', () => {
   describe('getAccessibleOrgIds', () => {
     it('should return empty array for admin (access to all)', () => {
       const adminUser: JwtPayload = {
-        id: 1,
+        userId: 1,
         email: 'admin@example.com',
         role: 'admin',
       };
@@ -30,7 +30,7 @@ describe('PermissionService', () => {
 
     it('should return org id for manager', () => {
       const managerUser: JwtPayload = {
-        id: 2,
+        userId: 2,
         email: 'manager@example.com',
         role: 'manager',
         orgId: 5,
@@ -41,7 +41,7 @@ describe('PermissionService', () => {
 
     it('should return empty array for regular user', () => {
       const regularUser: JwtPayload = {
-        id: 3,
+        userId: 3,
         email: 'user@example.com',
         role: 'user',
       };
@@ -53,7 +53,7 @@ describe('PermissionService', () => {
   describe('canViewUserDetails', () => {
     it('admin should view all users', () => {
       const admin: JwtPayload = {
-        id: 1,
+        userId: 1,
         email: 'admin@example.com',
         role: 'admin',
       };
@@ -62,7 +62,7 @@ describe('PermissionService', () => {
 
     it('user should view their own details', () => {
       const user: JwtPayload = {
-        id: 5,
+        userId: 5,
         email: 'user@example.com',
         role: 'user',
       };
@@ -71,7 +71,7 @@ describe('PermissionService', () => {
 
     it('user should not view others details', () => {
       const user: JwtPayload = {
-        id: 5,
+        userId: 5,
         email: 'user@example.com',
         role: 'user',
       };
@@ -80,7 +80,7 @@ describe('PermissionService', () => {
 
     it('manager should view users in their org', () => {
       const manager: JwtPayload = {
-        id: 2,
+        userId: 2,
         email: 'manager@example.com',
         role: 'manager',
         orgId: 3,
@@ -134,7 +134,7 @@ describe('PermissionService', () => {
 
     it('admin should see all users', () => {
       const admin: JwtPayload = {
-        id: 1,
+        userId: 1,
         email: 'admin@example.com',
         role: 'admin',
       };
@@ -144,7 +144,7 @@ describe('PermissionService', () => {
 
     it('manager should see users in their org and unassigned', () => {
       const manager: JwtPayload = {
-        id: 2,
+        userId: 2,
         email: 'manager@example.com',
         role: 'manager',
         orgId: 2,
@@ -155,7 +155,7 @@ describe('PermissionService', () => {
 
     it('user should see only themselves', () => {
       const user: JwtPayload = {
-        id: 3,
+        userId: 3,
         email: 'user@example.com',
         role: 'user',
       };
