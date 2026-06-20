@@ -6,6 +6,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { UserRole } from '../auth/enums/role.enum';
 
 @Entity('users')
 @Index(['role'])
@@ -28,7 +29,7 @@ export class User {
   @Column({ type: 'varchar' })
   password: string;
 
-  @Column({ type: 'varchar', default: 'user' })
+  @Column({ type: 'varchar', default: UserRole.FAN })
   role: string;
 
   @Column({ type: 'varchar', default: 'active' })

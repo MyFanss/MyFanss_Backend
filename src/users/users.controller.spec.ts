@@ -70,13 +70,15 @@ describe('UsersController', () => {
 
       (service.getAllUsers as jest.Mock).mockResolvedValue(mockResponse);
 
-      const result = await controller.getAllUsers(query);
+      const currentUser = {
+        userId: 1,
+        email: 'admin@example.com',
+        role: 'admin',
+      };
+      const result = await controller.getAllUsers(query, currentUser);
 
       expect(result).toEqual(mockResponse);
-      expect(service.getAllUsers).toHaveBeenCalledWith(
-        query,
-        expect.any(Object),
-      );
+      expect(service.getAllUsers).toHaveBeenCalledWith(query, currentUser);
     });
 
     it('should handle search parameter', async () => {
@@ -99,12 +101,14 @@ describe('UsersController', () => {
 
       (service.getAllUsers as jest.Mock).mockResolvedValue(mockResponse);
 
-      await controller.getAllUsers(query);
+      const currentUser = {
+        userId: 1,
+        email: 'admin@example.com',
+        role: 'admin',
+      };
+      await controller.getAllUsers(query, currentUser);
 
-      expect(service.getAllUsers).toHaveBeenCalledWith(
-        query,
-        expect.any(Object),
-      );
+      expect(service.getAllUsers).toHaveBeenCalledWith(query, currentUser);
     });
 
     it('should handle filtering by role and status', async () => {
@@ -128,12 +132,14 @@ describe('UsersController', () => {
 
       (service.getAllUsers as jest.Mock).mockResolvedValue(mockResponse);
 
-      await controller.getAllUsers(query);
+      const currentUser = {
+        userId: 1,
+        email: 'admin@example.com',
+        role: 'admin',
+      };
+      await controller.getAllUsers(query, currentUser);
 
-      expect(service.getAllUsers).toHaveBeenCalledWith(
-        query,
-        expect.any(Object),
-      );
+      expect(service.getAllUsers).toHaveBeenCalledWith(query, currentUser);
     });
 
     it('should handle cursor-based pagination', async () => {
@@ -156,12 +162,14 @@ describe('UsersController', () => {
 
       (service.getAllUsers as jest.Mock).mockResolvedValue(mockResponse);
 
-      await controller.getAllUsers(query);
+      const currentUser = {
+        userId: 1,
+        email: 'admin@example.com',
+        role: 'admin',
+      };
+      await controller.getAllUsers(query, currentUser);
 
-      expect(service.getAllUsers).toHaveBeenCalledWith(
-        query,
-        expect.any(Object),
-      );
+      expect(service.getAllUsers).toHaveBeenCalledWith(query, currentUser);
     });
   });
 
@@ -235,7 +243,12 @@ describe('UsersController', () => {
 
       (service.updateUser as jest.Mock).mockResolvedValue(mockUpdatedUser);
 
-      const result = await controller.updateUser(1, updateDto);
+      const adminUser = {
+        userId: 1,
+        email: 'admin@example.com',
+        role: 'admin',
+      };
+      const result = await controller.updateUser(1, updateDto, adminUser);
 
       expect(result).toEqual(mockUpdatedUser);
       expect(service.updateUser).toHaveBeenCalledWith(1, updateDto);
@@ -305,7 +318,12 @@ describe('UsersController', () => {
 
       (service.updateProfile as jest.Mock).mockResolvedValue(mockUpdated);
 
-      const result = await controller.updateProfile(1, profileDto);
+      const adminUser = {
+        userId: 1,
+        email: 'admin@example.com',
+        role: 'admin',
+      };
+      const result = await controller.updateProfile(1, profileDto, adminUser);
 
       expect(result).toEqual(mockUpdated);
       expect(service.updateProfile).toHaveBeenCalledWith(1, profileDto);

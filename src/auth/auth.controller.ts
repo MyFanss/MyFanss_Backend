@@ -19,8 +19,7 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { AuthTokensResponseDto } from './dto/auth-tokens-response.dto';
 import { SessionResponseDto } from './dto/session-response.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { AuditService } from '../audit/audit.service';
-import { AuditAction } from '../audit/audit-action.enum';
+import { AuthTier } from '../common/throttle/tiers.decorator';
 import {
   ApiTags,
   ApiOperation,
@@ -46,6 +45,7 @@ export class AuthController {
   ) {}
 
   @Post('signup')
+  @AuthTier()
   @ApiOperation({
     summary: 'User signup — returns access + refresh token pair',
   })
@@ -57,6 +57,7 @@ export class AuthController {
   }
 
   @Post('login')
+  @AuthTier()
   @HttpCode(200)
   @ApiOperation({ summary: 'User login — returns access + refresh token pair' })
   @ApiResponse({ status: 200, type: AuthTokensResponseDto })
@@ -84,6 +85,7 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @AuthTier()
   @HttpCode(200)
   @ApiOperation({
     summary: 'Rotate refresh token — returns new access + refresh token pair',

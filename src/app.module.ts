@@ -11,8 +11,9 @@ import { dataOption } from './migrations/appDataSource.db';
 import { LoggerModule } from './logger/logger.module';
 import { MonitoringModule } from './monitoring/monitoring.module';
 import { HealthModule } from './monitoring/health.module';
-import { AuditModule } from './audit/audit.module';
+import { CreatorsModule } from './creators/creators.module';
 import { RateLimitService } from './common/services/rate-limit.service';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { RateLimitService } from './common/services/rate-limit.service';
       }),
       inject: [ConfigService],
     }),
+    ThrottleConfigModule,
     UsersModule,
     LoggerModule,
     MonitoringModule,
@@ -37,6 +39,6 @@ import { RateLimitService } from './common/services/rate-limit.service';
     AuditModule,
   ],
   controllers: [AppController],
-  providers: [AppService, RateLimitService],
+  providers: [AppService],
 })
 export class AppModule {}
