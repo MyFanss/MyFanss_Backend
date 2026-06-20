@@ -143,7 +143,36 @@ Run the end-to-end suite:
 npm run test:e2e
 ```
 
-The e2e suite uses a dedicated PostgreSQL test database and does not read your normal `DB_*` variables. By default it connects to:
+The e2e suite uses a dedicated PostgreSQL test database and does not read your normal `DB_*` variables.
+
+### Running integration tests locally
+
+Integration tests use [Testcontainers](https://testcontainers.com/) to spin up a real PostgreSQL container automatically — no manual database setup or credentials required. The only prerequisite is a running Docker daemon.
+
+```bash
+# Make sure Docker is running first
+docker info
+
+# Run the full integration suite
+npm run test:integration
+```
+
+What happens under the hood:
+
+1. Testcontainers pulls `postgres:16` (cached after the first run) and starts a container on a random free port.
+2. All TypeORM migrations run against the fresh database. If any migration fails, the suite exits immediately with a clear error.
+3. Each test file clears all tables in `beforeEach` so tests are fully isolated and order-independent.
+4. After the suite finishes the container is stopped and removed automatically.
+
+The integration tests cover:
+
+| Spec file | Scenarios |
+|-----------|-----------|
+| `users-pagination.integration.spec.ts` | Default limit, custom limit, cursor-based next page, role filter, status filter, search |
+| `user-sessions.integration.spec.ts` | Session creation, multi-session login, token rotation, logout, logout-all, revoked-token rejection |
+| `user-profile-constraints.integration.spec.ts` | Duplicate email rejection, non-unique display name, profile field persistence, bio length limit |
+
+If you want to keep the container running between runs for faster iteration, set `TESTCONTAINERS_RYUK_DISABLED=true` in your shell. The next `npm run test:integration` will start a fresh container as usual once RYUK is re-enabled. By default it connects to:
 
 ```env
 TEST_DB_HOST=127.0.0.1
@@ -191,6 +220,28 @@ npm run seed:dev -- --fresh
 | Admin       | admin@dev.local        | AdminPass!      | admin         |
 
 These credentials are **development-only** and must never be used in production.
+
+## Creator Analytics Snapshot
+
+#### Get creator analytics for the current authenticated creator
+
+```bash
+curl -H "Authorization: Bearer <ACCESS_TOKEN>" "http://localhost:3000/creators/me/analytics?days=30"
+```
+
+**Response**:
+
+```json
+{
+  "data": {
+    "subscriberCount": 120,
+    "newSubscribers": 15,
+    "churnedSubscribers": 3,
+    "periodDays": 30,
+    "topReferrers": []
+  }
+}
+```
 
 ## Contributing
 

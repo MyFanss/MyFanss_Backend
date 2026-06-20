@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { User } from '../user.entity';
 
 export interface JwtPayload {
-  id: number;
+  userId: number;
   email: string;
   role: string;
   orgId?: number;
@@ -32,7 +32,7 @@ export class PermissionService {
     }
 
     // Users can view their own details
-    if (userId === requestingUser.id) {
+    if (userId === requestingUser.userId) {
       return true;
     }
 
@@ -57,7 +57,7 @@ export class PermissionService {
     }
 
     // Regular users see only themselves
-    return users.filter((u) => u.id === requestingUser.id);
+    return users.filter((u) => u.id === requestingUser.userId);
   }
 
   getSortableFieldsForRole(role: string): string[] {
