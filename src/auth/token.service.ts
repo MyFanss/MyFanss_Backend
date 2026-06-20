@@ -39,6 +39,7 @@ type DeviceInfo = {
   deviceId?: string;
   userAgent?: string;
   ipAddress?: string;
+  role?: string;
 };
 
 @Injectable()
