@@ -113,6 +113,7 @@ export class UsersService {
     // Update search text and invalidate caches
     await this.searchService.updateSearchTextForUser(savedUser.id);
     await this.invalidateUserRelatedCaches(savedUser.id);
+    await this.notificationsService.createDefaultPreferences(savedUser.id);
 
     return plainToInstance(
       UserResponseDto,
