@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { User } from 'src/users/user.entity';
 import { RefreshToken } from 'src/auth/entities/refresh-token.entity';
+import { Subscription } from 'src/subscriptions/subscription.entity';
 import { AuditLog } from 'src/audit/audit.entity';
 import { DataSourceOptions } from 'typeorm';
 
@@ -12,7 +13,7 @@ export function dataOption(configService: ConfigService): DataSourceOptions {
     username: configService.get<string>('DB_USERNAME'),
     password: configService.get<string>('DB_PASSWORD'),
     database: configService.get<string>('DB_NAME'),
-    entities: [User, RefreshToken, AuditLog],
+    entities: [User, RefreshToken, Subscription, AuditLog],
     synchronize: true,
   };
 }
