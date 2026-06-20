@@ -3,7 +3,7 @@ import { config } from 'dotenv';
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from '../users/user.entity';
-import { CreatorProfile } from '../creators/creator-profile.entity';
+import { Subscription } from '../subscriptions/subscription.entity';
 
 config();
 
@@ -19,24 +19,26 @@ const dataSource = new DataSource({
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  entities: [User, CreatorProfile],
+  entities: [User, Subscription],
   synchronize: false,
 });
 
 const SEED_USERS = [
-  { name: 'Fan One', email: 'fan1@dev.local', password: 'Fan1Pass!' },
-  { name: 'Fan Two', email: 'fan2@dev.local', password: 'Fan2Pass!' },
+  { name: 'Fan One', email: 'fan1@dev.local', password: 'Fan1Pass!', role: 'fan' },
+  { name: 'Fan Two', email: 'fan2@dev.local', password: 'Fan2Pass!', role: 'fan' },
   {
     name: 'Creator One',
     email: 'creator1@dev.local',
     password: 'Creator1Pass!',
+    role: 'creator',
   },
   {
     name: 'Creator Two',
     email: 'creator2@dev.local',
     password: 'Creator2Pass!',
+    role: 'creator',
   },
-  { name: 'Admin', email: 'admin@dev.local', password: 'AdminPass!' },
+  { name: 'Admin', email: 'admin@dev.local', password: 'AdminPass!', role: 'admin' },
 ];
 
 async function seed() {
@@ -56,39 +58,65 @@ async function seed() {
     }
     const hashed = await bcrypt.hash(u.password, 10);
     await repo.save(
-      repo.create({ name: u.name, email: u.email, password: hashed }),
+      repo.create({
+        name: u.name,
+        email: u.email,
+        password: hashed,
+        role: u.role ?? 'user',
+      }),
     );
     console.log(`Seeded: ${u.email}`);
   }
 
-  // Seed one creator profile for the first creator account.
-  const creatorRepo = dataSource.getRepository(CreatorProfile);
-  const creatorUser = await repo.findOneBy({ email: 'creator1@dev.local' });
-  if (creatorUser) {
-    const handle = 'creator_one';
-    const existingProfile = await creatorRepo.findOne({
-      where: [{ userId: creatorUser.id }, { handle }],
-    });
-    if (existingProfile) {
-      console.log(`Skipped creator profile (already exists): ${handle}`);
-    } else {
-      await creatorRepo.save(
-        creatorRepo.create({
-          userId: creatorUser.id,
-          handle,
-          displayName: 'Creator One',
-          bio: 'Demo creator profile seeded for development.',
-          bannerUrl: 'https://cdn.myfans.dev/banners/creator_one.jpg',
-          category: 'lifestyle',
-          isOnboarded: true,
-        }),
-      );
-      // Keep the seeded account's role consistent with onboarding.
-      if (creatorUser.role !== 'creator') {
-        creatorUser.role = 'creator';
-        await repo.save(creatorUser);
+  const subscriptionRepo = dataSource.getRepository(Subscription);
+
+  const creatorOne = await repo.findOneBy({ email: 'creator1@dev.local' });
+  const creatorTwo = await repo.findOneBy({ email: 'creator2@dev.local' });
+  const fanOne = await repo.findOneBy({ email: 'fan1@dev.local' });
+  const fanTwo = await repo.findOneBy({ email: 'fan2@dev.local' });
+
+  if (creatorOne && creatorTwo && fanOne && fanTwo) {
+    const seedSubscriptions = [
+      {
+        creatorId: creatorOne.id,
+        subscriberId: fanOne.id,
+        status: 'active',
+        referrer: 'social',
+        createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
+      },
+      {
+        creatorId: creatorOne.id,
+        subscriberId: fanTwo.id,
+        status: 'active',
+        referrer: 'friend',
+        createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+      },
+      {
+        creatorId: creatorTwo.id,
+        subscriberId: fanOne.id,
+        status: 'active',
+        referrer: 'search',
+        createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+      },
+      {
+        creatorId: creatorOne.id,
+        subscriberId: fanTwo.id,
+        status: 'cancelled',
+        referrer: 'friend',
+        createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
+        cancelledAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      },
+    ];
+
+    for (const subs of seedSubscriptions) {
+      const exists = await subscriptionRepo.findOneBy({
+        creatorId: subs.creatorId,
+        subscriberId: subs.subscriberId,
+        status: subs.status,
+      });
+      if (!exists) {
+        await subscriptionRepo.save(subscriptionRepo.create(subs as any));
       }
-      console.log(`Seeded creator profile: ${handle}`);
     }
   }
 

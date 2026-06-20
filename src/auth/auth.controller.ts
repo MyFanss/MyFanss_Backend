@@ -19,6 +19,7 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { AuthTokensResponseDto } from './dto/auth-tokens-response.dto';
 import { SessionResponseDto } from './dto/session-response.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { AuthTier } from '../common/throttle/tiers.decorator';
 import {
   ApiTags,
   ApiOperation,
@@ -38,9 +39,13 @@ interface AuthenticatedRequest extends Request {
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly auditService: AuditService,
+  ) {}
 
   @Post('signup')
+  @AuthTier()
   @ApiOperation({
     summary: 'User signup — returns access + refresh token pair',
   })
@@ -52,6 +57,7 @@ export class AuthController {
   }
 
   @Post('login')
+  @AuthTier()
   @HttpCode(200)
   @ApiOperation({ summary: 'User login — returns access + refresh token pair' })
   @ApiResponse({ status: 200, type: AuthTokensResponseDto })
@@ -62,11 +68,24 @@ export class AuthController {
       loginDto.email,
       loginDto.password,
     );
-    if (!user) throw new UnauthorizedException('Invalid credentials');
+    if (!user) {
+      const ip =
+        (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress;
+      void this.auditService.log({
+        actorId: null,
+        action: AuditAction.USER_LOGIN_FAILED,
+        targetType: 'User',
+        targetId: null,
+        metadata: { email: loginDto.email },
+        ipAddress: ip,
+      });
+      throw new UnauthorizedException('Invalid credentials');
+    }
     return this.authService.login(user, this.extractDeviceInfo(req));
   }
 
   @Post('refresh')
+  @AuthTier()
   @HttpCode(200)
   @ApiOperation({
     summary: 'Rotate refresh token — returns new access + refresh token pair',

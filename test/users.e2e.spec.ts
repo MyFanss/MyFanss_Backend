@@ -5,6 +5,7 @@ import { AppModule } from '../src/app.module';
 import { User } from '../src/users/user.entity';
 import { Repository } from 'typeorm';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { UserRole } from '../src/auth/enums/role.enum';
 
 describe('Users E2E', () => {
   let app: INestApplication;
@@ -41,7 +42,12 @@ describe('Users E2E', () => {
           name: `User ${i}`,
           email: `user${i}@example.com`,
           password: 'hashed',
-          role: i % 3 === 0 ? 'admin' : i % 3 === 1 ? 'manager' : 'user',
+          role:
+            i % 3 === 0
+              ? UserRole.ADMIN
+              : i % 3 === 1
+                ? UserRole.CREATOR
+                : UserRole.FAN,
           status: i % 2 === 0 ? 'active' : 'inactive',
           org_id: i % 4 === 0 ? null : (i % 4) + 1,
         });
@@ -106,7 +112,8 @@ describe('Users E2E', () => {
           name: `User ${i}`,
           email: `user${i}@example.com`,
           password: 'hashed',
-          role: i <= 5 ? 'admin' : i <= 15 ? 'manager' : 'user',
+          role:
+            i <= 5 ? UserRole.ADMIN : i <= 15 ? UserRole.CREATOR : UserRole.FAN,
           status: i <= 10 ? 'active' : 'inactive',
           org_id: i % 2 === 0 ? 1 : 2,
         });
@@ -116,10 +123,12 @@ describe('Users E2E', () => {
     it('should filter by role', async () => {
       const res = await request(app.getHttpServer())
         .get('/users')
-        .query({ role: 'admin' })
+        .query({ role: UserRole.ADMIN })
         .expect(200);
 
-      expect(res.body.data.every((u: any) => u.role === 'admin')).toBe(true);
+      expect(res.body.data.every((u: any) => u.role === UserRole.ADMIN)).toBe(
+        true,
+      );
       expect(res.body.data.length).toBe(5);
     });
 
@@ -131,7 +140,7 @@ describe('Users E2E', () => {
 
       expect(
         res.body.data.every(
-          (u: any) => u.role === 'admin' || u.role === 'manager',
+          (u: any) => u.role === UserRole.ADMIN || u.role === UserRole.CREATOR,
         ),
       ).toBe(true);
     });
@@ -164,13 +173,15 @@ describe('Users E2E', () => {
     it('should combine multiple filters', async () => {
       const res = await request(app.getHttpServer())
         .get('/users')
-        .query({ role: 'admin', status: 'active', org_id: 1 })
+        .query({ role: UserRole.ADMIN, status: 'active', org_id: 1 })
         .expect(200);
 
       expect(
         res.body.data.every(
           (u: any) =>
-            u.role === 'admin' && u.status === 'active' && u.org_id === 1,
+            u.role === UserRole.ADMIN &&
+            u.status === 'active' &&
+            u.org_id === 1,
         ),
       ).toBe(true);
     });
@@ -183,7 +194,7 @@ describe('Users E2E', () => {
           name: `User ${String.fromCharCode(96 + i)}`,
           email: `user${i}@example.com`,
           password: 'hashed',
-          role: 'user',
+          role: UserRole.FAN,
           status: 'active',
         });
       }
@@ -218,7 +229,7 @@ describe('Users E2E', () => {
         name: 'John Admin',
         email: 'john.admin@example.com',
         password: 'hashed',
-        role: 'admin',
+        role: UserRole.ADMIN,
         status: 'active',
       });
 
@@ -226,7 +237,7 @@ describe('Users E2E', () => {
         name: 'Jane Manager',
         email: 'jane.manager@example.com',
         password: 'hashed',
-        role: 'manager',
+        role: UserRole.CREATOR,
         status: 'active',
       });
 
@@ -234,7 +245,7 @@ describe('Users E2E', () => {
         name: 'Bob User',
         email: 'bob@example.com',
         password: 'hashed',
-        role: 'user',
+        role: UserRole.FAN,
         status: 'active',
       });
     });
@@ -263,10 +274,12 @@ describe('Users E2E', () => {
     it('should combine search with filters', async () => {
       const res = await request(app.getHttpServer())
         .get('/users')
-        .query({ search: 'admin', role: 'admin' })
+        .query({ search: 'admin', role: UserRole.ADMIN })
         .expect(200);
 
-      expect(res.body.data.every((u: any) => u.role === 'admin')).toBe(true);
+      expect(res.body.data.every((u: any) => u.role === UserRole.ADMIN)).toBe(
+        true,
+      );
     });
   });
 
@@ -276,7 +289,7 @@ describe('Users E2E', () => {
         name: 'Test User',
         email: 'test@example.com',
         password: 'hashed',
-        role: 'user',
+        role: UserRole.FAN,
         status: 'active',
         org_id: 1,
       });
@@ -331,7 +344,7 @@ describe('Users E2E', () => {
         name: 'Unique User',
         email: 'unique@example.com',
         password: 'hashed',
-        role: 'user',
+        role: UserRole.FAN,
         status: 'active',
       });
 
@@ -349,7 +362,7 @@ describe('Users E2E', () => {
         name: "O'Brien",
         email: 'obrien@example.com',
         password: 'hashed',
-        role: 'user',
+        role: UserRole.FAN,
         status: 'active',
       });
 
@@ -369,7 +382,7 @@ describe('Users E2E', () => {
           name: `User ${i}`,
           email: `user${i}@example.com`,
           password: 'hashed',
-          role: 'user',
+          role: UserRole.FAN,
           status: 'active',
         });
       }

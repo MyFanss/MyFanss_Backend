@@ -3,10 +3,11 @@ import { UsersService } from '../users/users.service';
 import { SignupDto } from './dto/signup.dto';
 import { TokenService, TokenPair } from './token.service';
 import { RefreshToken } from './entities/refresh-token.entity';
+import { UserRole } from './enums/role.enum';
 import * as bcrypt from 'bcrypt';
 
 export interface AuthResponse extends TokenPair {
-  user: { id: number; name: string; email: string };
+  user: { id: number; name: string; email: string; role: UserRole };
   message?: string;
 }
 
@@ -14,6 +15,7 @@ export interface AuthenticatedUser {
   id: number;
   name: string;
   email: string;
+  role: UserRole;
 }
 
 @Injectable()
@@ -29,7 +31,12 @@ export class AuthService {
   ): Promise<AuthenticatedUser | null> {
     const user = await this.usersService.findByEmail(email);
     if (user && (await bcrypt.compare(pass, user.password))) {
-      return { id: user.id, name: user.name, email: user.email };
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: (user.role as UserRole) ?? UserRole.FAN,
+      };
     }
     return null;
   }
@@ -45,11 +52,17 @@ export class AuthService {
     const tokens = await this.tokenService.issueTokenPair(
       user.id,
       user.email,
+      (user.role as UserRole) ?? UserRole.FAN,
       opts,
     );
     return {
       ...tokens,
-      user: { id: user.id, name: user.name, email: user.email },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: (user.role as UserRole) ?? UserRole.FAN,
+      },
       message: userResponse.message,
     };
   }
@@ -61,11 +74,17 @@ export class AuthService {
     const tokens = await this.tokenService.issueTokenPair(
       user.id,
       user.email,
+      user.role,
       opts,
     );
     return {
       ...tokens,
-      user: { id: user.id, name: user.name, email: user.email },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
     };
   }
 
