@@ -17,6 +17,7 @@ import { HealthModule } from './monitoring/health.module';
 import { ThrottleConfigModule } from './common/throttle/throttle.module';
 import { AuditModule } from './audit/audit.module';
 import { AdminModule } from './admin/admin.module';
+import { UploadsModule } from './uploads/uploads.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { AdminModule } from './admin/admin.module';
     NotificationsModule,
     AuditModule,
     AdminModule,
+    UploadsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
