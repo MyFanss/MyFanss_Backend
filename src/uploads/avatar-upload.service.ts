@@ -1,7 +1,10 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { UsersService } from '../users/users.service';
-import { STORAGE_ADAPTER, StorageAdapter } from './adapters/storage-adapter.interface';
+import {
+  STORAGE_ADAPTER,
+  StorageAdapter,
+} from './adapters/storage-adapter.interface';
 import { NoOpVirusScanHook } from './hooks/virus-scan.hook';
 
 const MIME_TO_EXT: Record<string, string> = {

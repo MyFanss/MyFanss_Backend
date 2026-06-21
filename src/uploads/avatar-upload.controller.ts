@@ -33,7 +33,9 @@ export class AvatarUploadController {
   @Post('avatar')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('avatar', { storage: memoryStorage() }))
-  @ApiOperation({ summary: 'Upload or replace your avatar image (JWT required)' })
+  @ApiOperation({
+    summary: 'Upload or replace your avatar image (JWT required)',
+  })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {

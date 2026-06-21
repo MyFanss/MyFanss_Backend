@@ -1,7 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { AvatarUploadService } from './avatar-upload.service';
-import { STORAGE_ADAPTER, StorageAdapter } from './adapters/storage-adapter.interface';
+import {
+  STORAGE_ADAPTER,
+  StorageAdapter,
+} from './adapters/storage-adapter.interface';
 import { NoOpVirusScanHook } from './hooks/virus-scan.hook';
 import { UsersService } from '../users/users.service';
 import { User } from '../users/user.entity';
@@ -49,7 +52,9 @@ describe('AvatarUploadService', () => {
       updateProfile: jest.fn().mockResolvedValue(undefined),
     };
 
-    virusScan = { scan: jest.fn().mockResolvedValue(undefined) } as jest.Mocked<NoOpVirusScanHook>;
+    virusScan = {
+      scan: jest.fn().mockResolvedValue(undefined),
+    } as jest.Mocked<NoOpVirusScanHook>;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -116,9 +121,7 @@ describe('AvatarUploadService', () => {
 
       const [, savedFilename] = storage.save.mock.calls[0];
       expect(savedFilename).not.toContain('photo');
-      expect(savedFilename).toMatch(
-        /^[0-9a-f-]{36}\.(jpg|png|webp)$/,
-      );
+      expect(savedFilename).toMatch(/^[0-9a-f-]{36}\.(jpg|png|webp)$/);
     });
 
     it('calls the virus scan hook before saving', async () => {
