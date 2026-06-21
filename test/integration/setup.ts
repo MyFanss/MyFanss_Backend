@@ -15,33 +15,64 @@ export interface IntegrationApp {
   app: INestApplication;
   module: TestingModule;
   dataSource: DataSource;
-  container: StartedPostgreSqlContainer;
+  container?: StartedPostgreSqlContainer;
   userRepo: Repository<User>;
   tokenRepo: Repository<RefreshToken>;
 }
 
-/**
- * Boots a PostgreSQL container via Testcontainers, wires environment variables
- * so NestJS's TypeORM module connects to it, then starts the full NestJS app.
- * TypeORM's synchronize:true creates the schema; no credentials from .env are used.
- */
-export async function createIntegrationApp(): Promise<IntegrationApp> {
+function applySharedTestEnv(): void {
+  process.env.JWT_SECRET =
+    process.env.TEST_JWT_SECRET ?? 'integration-test-jwt-secret';
+  process.env.JWT_EXPIRES_IN = process.env.TEST_JWT_EXPIRES_IN ?? '1h';
+  process.env.NODE_ENV = 'test';
+  process.env.THROTTLE_ENABLED = 'false';
+}
+
+function applyExternalDatabaseEnv(): void {
+  process.env.DB_HOST = process.env.TEST_DB_HOST ?? '127.0.0.1';
+  process.env.DB_PORT = process.env.TEST_DB_PORT ?? '5432';
+  process.env.DB_NAME = process.env.TEST_DB_NAME ?? 'my_fans_test';
+  process.env.DB_USERNAME = process.env.TEST_DB_USERNAME ?? 'postgres';
+  process.env.DB_PASSWORD = process.env.TEST_DB_PASSWORD ?? 'postgres';
+}
+
+function shouldUseTestcontainers(): boolean {
+  // CI uses the GitHub Actions postgres service (see ci.yml).
+  // Locally, spin up an isolated Postgres container when Docker is available.
+  return process.env.CI !== 'true';
+}
+
+async function startDatabase(): Promise<
+  StartedPostgreSqlContainer | undefined
+> {
+  applySharedTestEnv();
+
+  if (!shouldUseTestcontainers()) {
+    applyExternalDatabaseEnv();
+    return undefined;
+  }
+
   const container = await new PostgreSqlContainer('postgres:16')
     .withDatabase('integration_test')
     .withUsername('postgres')
     .withPassword('postgres')
     .start();
 
-  // Point the app's TypeORM config at the fresh container
   process.env.DB_HOST = container.getHost();
   process.env.DB_PORT = String(container.getPort());
   process.env.DB_NAME = container.getDatabase();
   process.env.DB_USERNAME = container.getUsername();
   process.env.DB_PASSWORD = container.getPassword();
-  process.env.JWT_SECRET = 'integration-test-jwt-secret';
-  process.env.JWT_EXPIRES_IN = '1h';
-  process.env.NODE_ENV = 'test';
-  process.env.THROTTLE_ENABLED = 'false';
+
+  return container;
+}
+
+/**
+ * Boots PostgreSQL (Testcontainers locally, service container in CI),
+ * wires env vars for TypeORM, then starts the full NestJS app.
+ */
+export async function createIntegrationApp(): Promise<IntegrationApp> {
+  const container = await startDatabase();
 
   const module = await Test.createTestingModule({
     imports: [AppModule],
@@ -71,10 +102,19 @@ export async function createIntegrationApp(): Promise<IntegrationApp> {
 }
 
 export async function teardownIntegrationApp(
-  ctx: IntegrationApp,
+  ctx?: IntegrationApp,
 ): Promise<void> {
-  await ctx.app.close();
-  await ctx.container.stop();
+  if (!ctx) {
+    return;
+  }
+
+  if (ctx.app) {
+    await ctx.app.close();
+  }
+
+  if (ctx.container) {
+    await ctx.container.stop();
+  }
 }
 
 /** Wipes all tables between tests so specs are order-independent. */
