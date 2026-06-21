@@ -112,14 +112,22 @@ curl -X DELETE http://localhost:3000/users/1
    ```
 
 3. **Configure Environment**:
-   Create a `.env` file in the root directory with the following:
-   ```env
-   DB_HOST=localhost
-   DB_PORT=5432
-   DB_NAME=my_fans_db
-   DB_USERNAME=postgres
-   DB_PASSWORD=password
+   Copy the example file and adjust values for your local PostgreSQL instance:
+   ```bash
+   cp .env.example .env
    ```
+
+   Required variables (see `.env.example` for the full list):
+
+   | Variable | Description |
+   |----------|-------------|
+   | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD` | PostgreSQL connection |
+   | `JWT_SECRET` (or `JWT_ACCESS_SECRET`) | Access-token signing secret |
+   | `JWT_EXPIRES_IN` (or `JWT_ACCESS_EXPIRATION`) | Access-token lifetime |
+   | `PORT` | HTTP server port (default `3000`) |
+   | `NODE_ENV` | `development`, `test`, or `production` |
+
+   The app validates environment variables at startup and exits with a readable error if required values are missing or invalid.
 
 4. **Start the Application**:
    ```bash
