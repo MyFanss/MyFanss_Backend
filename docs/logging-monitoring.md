@@ -17,6 +17,22 @@
 - GlobalExceptionFilter logs all errors.
 - No sensitive data should be logged.
 
+### Request correlation IDs
+
+Every HTTP request is assigned an `X-Request-Id` header:
+
+- If the client sends `X-Request-Id`, that value is used.
+- Otherwise the server generates a UUID.
+- The ID is stored in request-scoped async context (`AsyncLocalStorage`) and included in all `AppLogger` output for that request.
+- Every API response includes `X-Request-Id` in response headers.
+- Error responses from `GlobalExceptionFilter` also include `requestId` in the JSON body for client-side error reporting.
+
+Example:
+
+```bash
+curl -i http://localhost:3000/users -H "X-Request-Id: my-trace-123"
+```
+
 ## Monitoring
 
 - Prometheus metrics exposed at `/metrics` (see `src/monitoring/monitoring.module.ts`).

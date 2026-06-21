@@ -6,6 +6,8 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { REQUEST_ID_HEADER } from '../common/middleware/request-id.middleware';
+import { getRequestId } from '../common/request-context/request-context.storage';
 import { AppLogger } from '../logger/app-logger.service';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -77,6 +79,16 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       GlobalExceptionFilter.name,
     );
 
+    const requestId =
+      getRequestId() ??
+      (typeof request.headers[REQUEST_ID_HEADER] === 'string'
+        ? request.headers[REQUEST_ID_HEADER]
+        : undefined);
+
+    if (requestId) {
+      response.setHeader('X-Request-Id', requestId);
+    }
+
     const body: Record<string, unknown> = {
       statusCode: status,
       message,
@@ -85,6 +97,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       error,
     };
     if (code) body.code = code;
+    if (requestId) body.requestId = requestId;
 
     response.status(status).json(body);
   }
