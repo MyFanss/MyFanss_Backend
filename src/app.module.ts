@@ -9,6 +9,7 @@ import { PostsModule } from './posts/posts.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { validateEnv } from './config/env.validation';
 import { CacheModule } from '@nestjs/cache-manager';
 import { dataOption } from './migrations/appDataSource.db';
 import { LoggerModule } from './logger/logger.module';
@@ -21,7 +22,7 @@ import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
     CacheModule.register({
       isGlobal: true,
       ttl: 60000, // 60 seconds default TTL
