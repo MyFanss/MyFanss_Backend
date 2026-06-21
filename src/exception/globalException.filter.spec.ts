@@ -2,7 +2,6 @@ import { GlobalExceptionFilter } from './globalException.filter';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { ArgumentsHost, HttpArgumentsHost } from '@nestjs/common/interfaces';
 import { Request, Response } from 'express';
-import { Test } from '@nestjs/testing';
 
 describe('GlobalExceptionFilter', () => {
   let filter: GlobalExceptionFilter;
@@ -15,10 +14,12 @@ describe('GlobalExceptionFilter', () => {
     mockResponse = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn().mockReturnThis(),
+      setHeader: jest.fn(),
     };
     mockRequest = {
       method: 'GET',
       url: '/api/test',
+      headers: {},
     };
     const mockHttpContext: Partial<HttpArgumentsHost> = {
       getResponse: <T = any>() => mockResponse as unknown as T,
@@ -63,6 +64,22 @@ describe('GlobalExceptionFilter', () => {
       }),
     );
     expect(mockResponse.json).toHaveBeenCalledTimes(1);
+  });
+
+  it('should include requestId in error response when present on the request', () => {
+    mockRequest.headers = { 'x-request-id': 'error-request-id' };
+    const exception = new HttpException('Not found', HttpStatus.NOT_FOUND);
+    filter.catch(exception, mockHost);
+
+    expect(mockResponse.setHeader).toHaveBeenCalledWith(
+      'X-Request-Id',
+      'error-request-id',
+    );
+    expect(mockResponse.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestId: 'error-request-id',
+      }),
+    );
   });
 
   it('should handle unknown exception correctly', () => {

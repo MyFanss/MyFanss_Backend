@@ -9,6 +9,7 @@ import {
   transports,
   Logger as WinstonLogger,
 } from 'winston';
+import { getRequestId } from '../common/request-context/request-context.storage';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -19,29 +20,49 @@ const winstonLogger: WinstonLogger = createLogger({
     : format.combine(
         format.colorize(),
         format.timestamp(),
-        format.printf(({ timestamp, level, message, context, ...meta }) => {
-          return `${timestamp} [${level}]${context ? ' [' + context + ']' : ''}: ${message} ${Object.keys(meta).length ? JSON.stringify(meta) : ''}`;
+        format.printf((info) => {
+          const { timestamp, level, message, context, requestId, ...meta } =
+            info;
+          const requestIdPart =
+            typeof requestId === 'string' ? ` [${requestId}]` : '';
+          const contextPart =
+            typeof context === 'string' ? ` [${context}]` : '';
+          const metaSuffix =
+            Object.keys(meta).length > 0 ? ` ${JSON.stringify(meta)}` : '';
+          return `${String(timestamp)} [${String(level)}]${contextPart}${requestIdPart}: ${String(message)}${metaSuffix}`;
         }),
       ),
   transports: [new transports.Console()],
 });
 
+function buildMeta(
+  context?: string,
+  extra?: Record<string, unknown>,
+): Record<string, unknown> {
+  const requestId = getRequestId();
+  return {
+    ...(context ? { context } : {}),
+    ...(requestId ? { requestId } : {}),
+    ...extra,
+  };
+}
+
 @Injectable()
 export class AppLogger implements NestLoggerService {
   log(message: any, context?: string) {
-    winstonLogger.info(message, { context });
+    winstonLogger.info(message, buildMeta(context));
   }
   error(message: any, trace?: string, context?: string) {
-    winstonLogger.error(message, { trace, context });
+    winstonLogger.error(message, buildMeta(context, { trace }));
   }
   warn(message: any, context?: string) {
-    winstonLogger.warn(message, { context });
+    winstonLogger.warn(message, buildMeta(context));
   }
   debug?(message: any, context?: string) {
-    winstonLogger.debug(message, { context });
+    winstonLogger.debug(message, buildMeta(context));
   }
   verbose?(message: any, context?: string) {
-    winstonLogger.verbose(message, { context });
+    winstonLogger.verbose(message, buildMeta(context));
   }
   setLogLevels?(levels: LogLevel[]) {
     winstonLogger.level = levels[0];
