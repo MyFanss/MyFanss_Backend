@@ -6,10 +6,9 @@ import {
   PostgreSqlContainer,
   StartedPostgreSqlContainer,
 } from '@testcontainers/postgresql';
-import { AppModule } from '../../src/app.module';
-import { User } from '../../src/users/user.entity';
-import { RefreshToken } from '../../src/auth/entities/refresh-token.entity';
 import { GlobalExceptionFilter } from '../../src/exception/globalException.filter';
+import type { User } from '../../src/users/user.entity';
+import type { RefreshToken } from '../../src/auth/entities/refresh-token.entity';
 
 export interface IntegrationApp {
   app: INestApplication;
@@ -73,6 +72,12 @@ async function startDatabase(): Promise<
  */
 export async function createIntegrationApp(): Promise<IntegrationApp> {
   const container = await startDatabase();
+
+  // Import after DB env is configured — AppModule validates env on load.
+  const { AppModule } = await import('../../src/app.module');
+  const { User } = await import('../../src/users/user.entity');
+  const { RefreshToken } =
+    await import('../../src/auth/entities/refresh-token.entity');
 
   const module = await Test.createTestingModule({
     imports: [AppModule],
