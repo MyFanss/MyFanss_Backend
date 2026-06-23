@@ -4,19 +4,19 @@ A NestJS-based RESTful API , using TypeORM with PostgreSQL. This README provides
 
 ## API Documentation
 
-| Method | Endpoint         | Description                     | Request Body                     | Response                          |
-|--------|------------------|---------------------------------|----------------------------------|-----------------------------------|
-| POST   | `/users`         | Create a new user              | `CreateUserDto` (name, email, password) | `UserResponseDto` (name, email, message) |
-| GET    | `/users/:id`     | Get a user by ID               | None                             | `UserResponseDto` (name, email, message) |
-| GET    | `/users`         | Get all users                  | None                             | `UserResponseDto[]`               |
-| PUT    | `/users/:id`     | Update a user by ID            | `UpdateUserDto` (name?, email?, password?) | `UserResponseDto` (name, email, message) |
-| DELETE | `/users/:id`     | Delete a user by ID            | None                             | `string` (success message)        |
+| Method | Endpoint             | Description                     | Request Body                     | Response                          |
+|--------|----------------------|---------------------------------|----------------------------------|-----------------------------------|
+| POST   | `/api/v1/users`      | Create a new user              | `CreateUserDto` (name, email, password) | `UserResponseDto` (name, email, message) |
+| GET    | `/api/v1/users/:id`  | Get a user by ID               | None                             | `UserResponseDto` (name, email, message) |
+| GET    | `/api/v1/users`      | Get all users                  | None                             | `UserResponseDto[]`               |
+| PUT    | `/api/v1/users/:id`  | Update a user by ID            | `UpdateUserDto` (name?, email?, password?) | `UserResponseDto` (name, email, message) |
+| DELETE | `/api/v1/users/:id`  | Delete a user by ID            | None                             | `string` (success message)        |
 
 ### Example Requests
 
 #### Create User
 ```bash
-curl -X POST http://localhost:3000/users -H "Content-Type: application/json" -d '{ "name": "Oladele20", "email": "samuel@mailto.com","password": "password3" }'
+curl -X POST http://localhost:3000/api/v1/users -H "Content-Type: application/json" -d '{ "name": "Oladele20", "email": "samuel@mailto.com","password": "password3" }'
 ```
 
 **Response**:
@@ -30,7 +30,7 @@ curl -X POST http://localhost:3000/users -H "Content-Type: application/json" -d 
 
 #### Get User by ID
 ```bash
-curl http://localhost:3000/users/1
+curl http://localhost:3000/api/v1/users/1
 ```
 **Response**:
 ```json
@@ -42,7 +42,7 @@ curl http://localhost:3000/users/1
 
 #### Get All Users
 ```bash
-curl http://localhost:3000/users
+curl http://localhost:3000/api/v1/users
 ```
 **Response**:
 ```json
@@ -60,7 +60,7 @@ curl http://localhost:3000/users
 
 #### Update User
 ```bash
-curl -X PUT http://localhost:3000/users/1 -H "Content-Type: application/json" -d '{"name":"blurbeast"}'
+curl -X PUT http://localhost:3000/api/v1/users/1 -H "Content-Type: application/json" -d '{"name":"blurbeast"}'
 ```
 **Response**:
 ```json
@@ -73,7 +73,7 @@ curl -X PUT http://localhost:3000/users/1 -H "Content-Type: application/json" -d
 
 #### Delete User
 ```bash
-curl -X DELETE http://localhost:3000/users/1
+curl -X DELETE http://localhost:3000/api/v1/users/1
 ```
 **Response**:
 ```json
@@ -234,6 +234,7 @@ These credentials are **development-only** and must never be used in production.
 - [Pagination, filtering & search](docs/pagination-filtering.md)
 - [Cursor pagination migration](docs/migration-pagination.md)
 - [Logging & monitoring](docs/logging-monitoring.md)
+- [API versioning and breaking change policy](docs/api-versioning.md)
 
 ## License
 
