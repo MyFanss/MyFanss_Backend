@@ -8,11 +8,15 @@ import { RefreshToken } from '../auth/entities/refresh-token.entity';
 import { UsersQueryService } from './services/users-query.service';
 import { SearchService } from './services/search.service';
 import { PermissionService } from './services/permission.service';
+import { AuditModule } from '../audit/audit.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, RefreshToken]),
     CacheModule.register(),
+    AuditModule,
+    NotificationsModule,
   ],
   providers: [
     UsersService,

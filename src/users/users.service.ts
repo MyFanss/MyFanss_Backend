@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
   Inject,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
@@ -21,9 +22,14 @@ import {
 import { UsersQueryService } from './services/users-query.service';
 import { SearchService } from './services/search.service';
 import { PermissionService, JwtPayload } from './services/permission.service';
+import { AuditService } from '../audit/audit.service';
+import { AuditAction } from '../audit/audit-action.enum';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import * as bcrypt from 'bcrypt';
+import { UserRole } from '../auth/enums/role.enum';
+import { AppLogger } from '../logger/app-logger.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class UsersService {
@@ -35,8 +41,11 @@ export class UsersService {
     private readonly queryService: UsersQueryService,
     private readonly searchService: SearchService,
     private readonly permissionService: PermissionService,
+    private readonly auditService: AuditService,
     @Inject(CACHE_MANAGER)
     private cacheManager: Cache,
+    private readonly logger: AppLogger,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async getAllUsers(
@@ -82,7 +91,7 @@ export class UsersService {
   }
 
   async createUser(createUserDto: CreateUserDto): Promise<UserResponseDto> {
-    let searchUser: User | null = await this.getUserByEmail(
+    const searchUser: User | null = await this.getUserByEmail(
       createUserDto.email,
     );
 
@@ -97,15 +106,16 @@ export class UsersService {
       saltRounds,
     );
 
-    let user: User = plainToInstance(User, {
+    const user: User = plainToInstance(User, {
       ...createUserDto,
       password: hashedPassword,
     });
-    let savedUser: User = await this.userRepository.save(user);
+    const savedUser: User = await this.userRepository.save(user);
 
     // Update search text and invalidate caches
     await this.searchService.updateSearchTextForUser(savedUser.id);
     await this.invalidateUserRelatedCaches(savedUser.id);
+    await this.notificationsService.createDefaultPreferences(savedUser.id);
 
     return plainToInstance(
       UserResponseDto,
@@ -124,12 +134,17 @@ export class UsersService {
     return this.userRepository.findOneBy({ email });
   }
 
-  private findById(id: number) {
+  async findById(id: number): Promise<User | null> {
     return this.userRepository.findOneBy({ id });
   }
 
+  async updatePassword(id: number, passwordHash: string): Promise<void> {
+    await this.userRepository.update(id, { password: passwordHash });
+    await this.invalidateUserRelatedCaches(id);
+  }
+
   async getUserById(id: number): Promise<UserResponseDto> {
-    let user: User | null = await this.findById(id);
+    const user: User | null = await this.findById(id);
     if (!user) {
       throw new NotFoundException('user not found');
     }
@@ -138,8 +153,8 @@ export class UsersService {
     });
   }
 
-  async deleteUser(id: number): Promise<string> {
-    let user: User | null = await this.findById(id);
+  async deleteUser(id: number, actorId?: number): Promise<string> {
+    const user: User | null = await this.findById(id);
     if (!user) {
       throw new NotFoundException('user not found');
     }
@@ -148,6 +163,14 @@ export class UsersService {
     await this.userRepository.update(id, { is_deleted: true });
     await this.invalidateUserRelatedCaches(id);
 
+    void this.auditService.log({
+      actorId: actorId ?? null,
+      action: AuditAction.USER_DELETED,
+      targetType: 'User',
+      targetId: id,
+      metadata: { email: user.email },
+    });
+
     return 'user deleted successfully...';
   }
 
@@ -155,7 +178,7 @@ export class UsersService {
     id: number,
     updateUserDto: UpdateUserDto,
   ): Promise<UserResponseDto> {
-    let user: User | null = await this.findById(id);
+    const user: User | null = await this.findById(id);
     if (!user) {
       throw new NotFoundException('user not found');
     }
@@ -168,7 +191,7 @@ export class UsersService {
     }
 
     Object.assign(user, updatePayload);
-    let savedUser: User = await this.userRepository.save(user);
+    const savedUser: User = await this.userRepository.save(user);
 
     if (passwordChanged) {
       await this.refreshTokenRepository.update(
@@ -188,6 +211,39 @@ export class UsersService {
         excludeExtraneousValues: true,
       },
     );
+  }
+
+  async changeUserRole(
+    id: number,
+    newRole: string,
+    actorId: number,
+  ): Promise<UserResponseDto> {
+    const user: User | null = await this.findById(id);
+    if (!user) {
+      throw new NotFoundException('user not found');
+    }
+
+    const oldRole = user.role;
+    if (oldRole === newRole) {
+      return plainToInstance(UserResponseDto, user, {
+        excludeExtraneousValues: true,
+      });
+    }
+
+    await this.userRepository.update(id, { role: newRole });
+    user.role = newRole;
+
+    void this.auditService.log({
+      actorId,
+      action: AuditAction.USER_ROLE_CHANGED,
+      targetType: 'User',
+      targetId: id,
+      metadata: { before: oldRole, after: newRole },
+    });
+
+    return plainToInstance(UserResponseDto, user, {
+      excludeExtraneousValues: true,
+    });
   }
 
   async updateProfile(
@@ -226,5 +282,39 @@ export class UsersService {
     if (query.created_to) filters.created_to = query.created_to;
 
     return filters;
+  }
+
+  async updateUserRole(
+    userId: number,
+    role: UserRole,
+    actorId?: number,
+  ): Promise<User> {
+    const user = await this.userRepository.findOneBy({ id: userId });
+    if (!user) {
+      throw new NotFoundException('user not found');
+    }
+
+    const oldRole = user.role as UserRole;
+    if (oldRole === role) {
+      return user;
+    }
+
+    const updatedUser = await this.userRepository.save({
+      ...user,
+      role,
+    });
+
+    this.logger.log(
+      `Role changed: actorId=${actorId ?? 'system'} targetId=${userId} oldRole=${oldRole} newRole=${role}`,
+      UsersService.name,
+    );
+
+    await this.invalidateUserRelatedCaches(userId);
+
+    return updatedUser;
+  }
+
+  async countAdmins(): Promise<number> {
+    return this.userRepository.countBy({ role: UserRole.ADMIN });
   }
 }

@@ -1,20 +1,28 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { CreatorsModule } from './creators/creators.module';
+import { PostsModule } from './posts/posts.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { validateEnv } from './config/env.validation';
 import { CacheModule } from '@nestjs/cache-manager';
 import { dataOption } from './migrations/appDataSource.db';
 import { LoggerModule } from './logger/logger.module';
 import { MonitoringModule } from './monitoring/monitoring.module';
 import { HealthModule } from './monitoring/health.module';
-import { RateLimitService } from './common/services/rate-limit.service';
+import { ThrottleConfigModule } from './common/throttle/throttle.module';
+import { AuditModule } from './audit/audit.module';
+import { AdminModule } from './admin/admin.module';
+import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
     CacheModule.register({
       isGlobal: true,
       ttl: 60000, // 60 seconds default TTL
@@ -26,13 +34,24 @@ import { RateLimitService } from './common/services/rate-limit.service';
       }),
       inject: [ConfigService],
     }),
+    ThrottleConfigModule,
     UsersModule,
     LoggerModule,
     MonitoringModule,
     HealthModule,
     AuthModule,
+    SubscriptionsModule,
+    CreatorsModule,
+    PostsModule,
+    NotificationsModule,
+    AuditModule,
+    AdminModule,
   ],
   controllers: [AppController],
-  providers: [AppService, RateLimitService],
+  providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(RequestIdMiddleware).forRoutes('*');
+  }
+}

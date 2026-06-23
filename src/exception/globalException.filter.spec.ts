@@ -14,10 +14,12 @@ describe('GlobalExceptionFilter', () => {
     mockResponse = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn().mockReturnThis(),
+      setHeader: jest.fn(),
     };
     mockRequest = {
       method: 'GET',
-      url: '/api/v1/test',
+      url: '/api/test',
+      headers: {},
     };
     const mockHttpContext: Partial<HttpArgumentsHost> = {
       getResponse: <T = any>() => mockResponse as unknown as T,
@@ -58,7 +60,23 @@ describe('GlobalExceptionFilter', () => {
     );
   });
 
-  it('3. should handle unknown exception correctly', () => {
+  it('should include requestId in error response when present on the request', () => {
+    mockRequest.headers = { 'x-request-id': 'error-request-id' };
+    const exception = new HttpException('Not found', HttpStatus.NOT_FOUND);
+    filter.catch(exception, mockHost);
+
+    expect(mockResponse.setHeader).toHaveBeenCalledWith(
+      'X-Request-Id',
+      'error-request-id',
+    );
+    expect(mockResponse.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestId: 'error-request-id',
+      }),
+    );
+  });
+
+  it('should handle unknown exception correctly', () => {
     const exception = { some: 'unknown' };
     filter.catch(exception, mockHost);
 

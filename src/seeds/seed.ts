@@ -3,6 +3,17 @@ import { config } from 'dotenv';
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from '../users/user.entity';
+import {
+  Subscription,
+  SubscriptionStatus,
+} from '../subscriptions/subscription.entity';
+
+type SeedSubscription = {
+  creatorId: number;
+  fanId: number;
+  status: SubscriptionStatus;
+  cancelledAt?: Date;
+};
 
 config();
 
@@ -18,24 +29,41 @@ const dataSource = new DataSource({
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  entities: [User],
+  entities: [User, Subscription],
   synchronize: false,
 });
 
 const SEED_USERS = [
-  { name: 'Fan One', email: 'fan1@dev.local', password: 'Fan1Pass!' },
-  { name: 'Fan Two', email: 'fan2@dev.local', password: 'Fan2Pass!' },
+  {
+    name: 'Fan One',
+    email: 'fan1@dev.local',
+    password: 'Fan1Pass!',
+    role: 'fan',
+  },
+  {
+    name: 'Fan Two',
+    email: 'fan2@dev.local',
+    password: 'Fan2Pass!',
+    role: 'fan',
+  },
   {
     name: 'Creator One',
     email: 'creator1@dev.local',
     password: 'Creator1Pass!',
+    role: 'creator',
   },
   {
     name: 'Creator Two',
     email: 'creator2@dev.local',
     password: 'Creator2Pass!',
+    role: 'creator',
   },
-  { name: 'Admin', email: 'admin@dev.local', password: 'AdminPass!' },
+  {
+    name: 'Admin',
+    email: 'admin@dev.local',
+    password: 'AdminPass!',
+    role: 'admin',
+  },
 ];
 
 async function seed() {
@@ -55,9 +83,58 @@ async function seed() {
     }
     const hashed = await bcrypt.hash(u.password, 10);
     await repo.save(
-      repo.create({ name: u.name, email: u.email, password: hashed }),
+      repo.create({
+        name: u.name,
+        email: u.email,
+        password: hashed,
+        role: u.role ?? 'user',
+      }),
     );
     console.log(`Seeded: ${u.email}`);
+  }
+
+  const subscriptionRepo = dataSource.getRepository(Subscription);
+
+  const creatorOne = await repo.findOneBy({ email: 'creator1@dev.local' });
+  const creatorTwo = await repo.findOneBy({ email: 'creator2@dev.local' });
+  const fanOne = await repo.findOneBy({ email: 'fan1@dev.local' });
+  const fanTwo = await repo.findOneBy({ email: 'fan2@dev.local' });
+
+  if (creatorOne && creatorTwo && fanOne && fanTwo) {
+    const seedSubscriptions: SeedSubscription[] = [
+      {
+        creatorId: creatorOne.id,
+        fanId: fanOne.id,
+        status: 'active',
+      },
+      {
+        creatorId: creatorOne.id,
+        fanId: fanTwo.id,
+        status: 'active',
+      },
+      {
+        creatorId: creatorTwo.id,
+        fanId: fanOne.id,
+        status: 'active',
+      },
+      {
+        creatorId: creatorOne.id,
+        fanId: fanTwo.id,
+        status: 'cancelled',
+        cancelledAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      },
+    ];
+
+    for (const subs of seedSubscriptions) {
+      const exists = await subscriptionRepo.findOneBy({
+        creatorId: subs.creatorId,
+        fanId: subs.fanId,
+        status: subs.status,
+      });
+      if (!exists) {
+        await subscriptionRepo.save(subscriptionRepo.create(subs));
+      }
+    }
   }
 
   await dataSource.destroy();
