@@ -1,18 +1,21 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './exception/globalException.filter';
 import { AppLogger } from './logger/app-logger.service';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { BadRequestException, ValidationPipe } from '@nestjs/common';
-import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { ValidationPipe } from '@nestjs/common';
+import * as path from 'path';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
     logger: new AppLogger(),
   });
 
-  app.setGlobalPrefix('api/v1');
+  // Serve uploaded files (local storage only — S3 serves its own URLs)
+  const uploadDir = path.resolve(process.env.UPLOAD_DIR ?? './uploads');
+  app.useStaticAssets(uploadDir, { prefix: '/uploads' });
 
   // Global validation pipe
   app.useGlobalPipes(

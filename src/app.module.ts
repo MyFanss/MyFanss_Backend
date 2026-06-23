@@ -46,6 +46,7 @@ import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
     NotificationsModule,
     AuditModule,
     AdminModule,
+    UploadsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
