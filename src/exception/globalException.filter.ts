@@ -63,10 +63,37 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           normalized.message;
         error = (responseBody.error as string | undefined) ?? error;
         code = responseBody.code as string | undefined;
+        details = responseBody.details as any[] | undefined;
       } else if (typeof exResponse === 'string') {
         message = exResponse;
       } else {
         message = normalized.message;
+      }
+    }
+
+    if (!code) {
+      switch (status) {
+        case 400:
+          code = 'BAD_REQUEST';
+          break;
+        case 401:
+          code = 'UNAUTHORIZED';
+          break;
+        case 403:
+          code = 'FORBIDDEN';
+          break;
+        case 404:
+          code = 'NOT_FOUND';
+          break;
+        case 409:
+          code = 'CONFLICT';
+          break;
+        case 500:
+          code = 'INTERNAL_SERVER_ERROR';
+          break;
+        default:
+          code = 'UNKNOWN_ERROR';
+          break;
       }
     }
 
@@ -91,10 +118,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     const body: Record<string, unknown> = {
       statusCode: status,
-      message,
-      timestamp: new Date().toISOString(),
-      path: request.url,
       error,
+      message: errorMessage,
+      code,
     };
     if (code) body.code = code;
     if (requestId) body.requestId = requestId;

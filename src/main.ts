@@ -23,10 +23,22 @@ async function bootstrap() {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
+      exceptionFactory: (errors) => {
+        const details = errors.map((error) => ({
+          field: error.property,
+          message: Object.values(error.constraints || {}).join(', '),
+        }));
+        return new BadRequestException({
+          message: 'Validation failed',
+          code: 'VALIDATION_ERROR',
+          details,
+        });
+      },
     }),
   );
 
   app.useGlobalFilters(new GlobalExceptionFilter());
+  app.useGlobalInterceptors(new TransformInterceptor());
 
   // Swagger configuration
   const config = new DocumentBuilder()
@@ -46,14 +58,14 @@ async function bootstrap() {
     )
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+  SwaggerModule.setup('api/v1/docs', app, document);
 
   await app.listen(process.env.PORT ?? 3000);
   console.log(
-    `Application is running on: http://localhost:${process.env.PORT ?? 3000}`,
+    `Application is running on: http://localhost:${process.env.PORT ?? 3000}/api/v1`,
   );
   console.log(
-    `Swagger documentation: http://localhost:${process.env.PORT ?? 3000}/api`,
+    `Swagger documentation: http://localhost:${process.env.PORT ?? 3000}/api/v1/docs`,
   );
 }
 
