@@ -53,6 +53,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         ? normalized.name
         : ((normalized as Error)?.name ?? 'UnknownError');
     let code: string | undefined;
+    let details: any[] | undefined;
 
     if (normalized instanceof HttpException) {
       const exResponse = normalized.getResponse();
@@ -123,6 +124,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       code,
     };
     if (code) body.code = code;
+    if (details) body.details = details;
     if (requestId) body.requestId = requestId;
 
     response.status(status).json(body);
