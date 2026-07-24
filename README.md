@@ -134,7 +134,12 @@ curl -X DELETE http://localhost:3000/api/v1/users/1
    npm run start:dev
    ```
 
-5. **Test APIs**:
+5. **Explore the API via Swagger UI**:
+
+   Open [http://localhost:3000/api/v1/docs](http://localhost:3000/api/v1/docs) in your browser.
+   See [docs/swagger-auth.md](docs/swagger-auth.md) for the full login → authorize workflow.
+
+6. **Test APIs**:
    Use the `curl` commands in the API Documentation section to verify endpoints.
 
 ### Running Tests
@@ -290,6 +295,7 @@ curl -H "Authorization: Bearer <ACCESS_TOKEN>" "http://localhost:3000/creators/m
 
 ## Documentation
 
+- [Swagger / OpenAPI auth guide](docs/swagger-auth.md)
 - [Pagination, filtering & search](docs/pagination-filtering.md)
 - [Cursor pagination migration](docs/migration-pagination.md)
 - [Logging & monitoring](docs/logging-monitoring.md)

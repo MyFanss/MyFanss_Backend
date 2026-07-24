@@ -19,6 +19,7 @@ import { ThrottleConfigModule } from './common/throttle/throttle.module';
 import { AuditModule } from './audit/audit.module';
 import { AdminModule } from './admin/admin.module';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
+import { UploadsModule } from './uploads/uploads.module';
 
 @Module({
   imports: [
