@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -10,13 +11,14 @@ import {
   UseGuards,
   Query,
   Header,
-  HttpCode,
   ForbiddenException,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
+import { GdprService } from './services/gdpr.service';
 import { CreateUserDto } from './dtos/createUser.dto';
 import { UpdateProfileDto } from './dtos/updateProfile.dto';
 import { UserResponseDto } from './dtos/userResponse.dto';
+import { UserExportResponseDto } from './dtos/user-export-response.dto';
 import { GetUsersQueryDto } from './dtos/get-users-query.dto';
 import { PaginatedResponseDto } from './dtos/paginated-response.dto';
 import { UpdateUserDto } from './dtos/updateUser.dto';
@@ -41,7 +43,10 @@ import {
 @ApiBearerAuth('JWT-auth')
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly gdprService: GdprService,
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -293,5 +298,44 @@ export class UsersController {
     }
 
     return this.usersService.updateProfile(id, updateProfileDto);
+  }
+
+  @Get('me/export')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Export my personal data (GDPR-style)',
+    description:
+      'Returns JSON of the authenticated user&#39;s profile, notification preferences, and subscriptions. Password hashes and tokens are excluded.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User data exported successfully',
+    type: UserExportResponseDto,
+  })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  async exportMyData(
+    @CurrentUser() currentUser: { userId: number; email: string; role: string },
+  ): Promise<UserExportResponseDto> {
+    return this.gdprService.exportUserData(currentUser.userId);
+  }
+
+  @Delete('me')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(204)
+  @ApiOperation({
+    summary: 'Delete my own account (soft delete)',
+    description:
+      'Soft-deletes the authenticated user&#39;s account, revokes all active sessions, and returns 204. The deleted user cannot authenticate afterward.',
+  })
+  @ApiResponse({
+    status: 204,
+    description: 'Account deleted successfully',
+  })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  async deleteMyAccount(
+    @CurrentUser() currentUser: { userId: number; email: string; role: string },
+  ): Promise<void> {
+    await this.gdprService.selfDeleteUser(currentUser.userId);
   }
 }

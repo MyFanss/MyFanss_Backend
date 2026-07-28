@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
+import { GdprService } from './services/gdpr.service';
 import { GetUsersQueryDto } from './dtos/get-users-query.dto';
 import { PaginatedResponseDto } from './dtos/paginated-response.dto';
 import { UserResponseDto } from './dtos/userResponse.dto';
@@ -23,6 +24,13 @@ describe('UsersController', () => {
             updateUser: jest.fn(),
             updateProfile: jest.fn(),
             deleteUser: jest.fn(),
+          },
+        },
+        {
+          provide: GdprService,
+          useValue: {
+            exportUserData: jest.fn(),
+            selfDeleteUser: jest.fn(),
           },
         },
       ],
