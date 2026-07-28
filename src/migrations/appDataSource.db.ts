@@ -7,6 +7,7 @@ import { Post } from 'src/posts/post.entity';
 import { NotificationPreference } from 'src/notifications/notification-preference.entity';
 import { CreatorProfile } from 'src/creators/creator-profile.entity';
 import { PasswordResetToken } from 'src/auth/entities/password-reset-token.entity';
+import { ContentReport } from 'src/moderation/content-report.entity';
 import { DataSourceOptions } from 'typeorm';
 
 export function dataOption(configService: ConfigService): DataSourceOptions {
@@ -26,6 +27,7 @@ export function dataOption(configService: ConfigService): DataSourceOptions {
       NotificationPreference,
       CreatorProfile,
       PasswordResetToken,
+      ContentReport,
     ],
     synchronize: true,
   };
