@@ -19,10 +19,16 @@ export class ExportedProfileDto {
   @ApiPropertyOptional({ example: 'JaneDoe', nullable: true })
   displayName?: string | null;
 
-  @ApiPropertyOptional({ example: 'Content creator and streamer', nullable: true })
+  @ApiPropertyOptional({
+    example: 'Content creator and streamer',
+    nullable: true,
+  })
   bio?: string | null;
 
-  @ApiPropertyOptional({ example: 'https://cdn.example.com/avatars/jane.jpg', nullable: true })
+  @ApiPropertyOptional({
+    example: 'https://cdn.example.com/avatars/jane.jpg',
+    nullable: true,
+  })
   avatarUrl?: string | null;
 
   @ApiProperty({ example: '2024-01-15T10:30:00.000Z' })
