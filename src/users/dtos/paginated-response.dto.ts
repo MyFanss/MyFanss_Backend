@@ -7,10 +7,16 @@ export class PaginationMetaDto {
   })
   cursor?: string;
 
-  @ApiProperty({ example: true, description: 'Whether more records exist after this page' })
+  @ApiProperty({
+    example: true,
+    description: 'Whether more records exist after this page',
+  })
   hasMore: boolean;
 
-  @ApiProperty({ example: 243, description: 'Total number of records matching the query' })
+  @ApiProperty({
+    example: 243,
+    description: 'Total number of records matching the query',
+  })
   totalCount: number;
 
   @ApiProperty({ example: 20, description: 'Page size that was applied' })

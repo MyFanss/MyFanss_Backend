@@ -34,21 +34,35 @@ export class UserResponseDto {
   @Expose()
   org_id?: number;
 
-  @ApiProperty({ example: '2024-01-15T10:30:00.000Z', description: 'Created at timestamp' })
+  @ApiProperty({
+    example: '2024-01-15T10:30:00.000Z',
+    description: 'Created at timestamp',
+  })
   @Expose()
   @Type(() => Date)
   created_at: Date;
 
-  @ApiProperty({ example: '2024-06-01T08:00:00.000Z', description: 'Last updated timestamp' })
+  @ApiProperty({
+    example: '2024-06-01T08:00:00.000Z',
+    description: 'Last updated timestamp',
+  })
   @Expose()
   @Type(() => Date)
   updated_at: Date;
 
-  @ApiPropertyOptional({ example: 'JaneDoe', description: 'Public display name', nullable: true })
+  @ApiPropertyOptional({
+    example: 'JaneDoe',
+    description: 'Public display name',
+    nullable: true,
+  })
   @Expose()
   displayName?: string | null;
 
-  @ApiPropertyOptional({ example: 'Content creator and streamer', description: 'Profile bio', nullable: true })
+  @ApiPropertyOptional({
+    example: 'Content creator and streamer',
+    description: 'Profile bio',
+    nullable: true,
+  })
   @Expose()
   bio?: string | null;
 
@@ -60,11 +74,17 @@ export class UserResponseDto {
   @Expose()
   avatarUrl?: string | null;
 
-  @ApiPropertyOptional({ example: 'user created successfully', description: 'Operation message' })
+  @ApiPropertyOptional({
+    example: 'user created successfully',
+    description: 'Operation message',
+  })
   @Expose()
   message?: string;
 
-  @ApiPropertyOptional({ example: 0.95, description: 'Search relevance score (0-1)' })
+  @ApiPropertyOptional({
+    example: 0.95,
+    description: 'Search relevance score (0-1)',
+  })
   @Expose()
   relevanceScore?: number;
 }
