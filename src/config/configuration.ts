@@ -27,6 +27,20 @@ export function getDatabaseConfig(
   };
 }
 
+export interface TipsConfig {
+  platformFeeBps: number;
+  minAmountCents: number;
+  maxAmountCents: number;
+}
+
+export function getTipsConfig(configService: ConfigService): TipsConfig {
+  return {
+    platformFeeBps: configService.get<number>('TIP_PLATFORM_FEE_BPS') ?? 500,
+    minAmountCents: configService.get<number>('TIP_MIN_AMOUNT_CENTS') ?? 100,
+    maxAmountCents: configService.get<number>('TIP_MAX_AMOUNT_CENTS') ?? 100000,
+  };
+}
+
 export function getJwtConfig(configService: ConfigService): JwtConfig {
   return {
     accessSecret:

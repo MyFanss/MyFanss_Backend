@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
@@ -7,6 +8,7 @@ import { TokenService } from './token.service';
 import { PasswordResetToken } from './entities/password-reset-token.entity';
 import { AuthController } from './auth.controller';
 import { AuditService } from '../audit/audit.service';
+import { MailerService } from '../mailer/mailer.service';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 
@@ -30,12 +32,21 @@ const mockAuditService = () => ({
   log: jest.fn(),
 });
 
+const mockMailerService = () => ({
+  sendPasswordReset: jest.fn().mockResolvedValue({ accepted: true }),
+});
+
+const mockConfigService = () => ({
+  get: jest.fn().mockReturnValue('http://localhost:3000'),
+});
+
 describe('Password Reset Flow (Unit)', () => {
   let authService: AuthService;
   let authController: AuthController;
   let resetTokenRepo: any;
   let usersService: any;
   let tokenService: any;
+  let mailerService: any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -58,6 +69,14 @@ describe('Password Reset Flow (Unit)', () => {
           provide: AuditService,
           useFactory: mockAuditService,
         },
+        {
+          provide: MailerService,
+          useFactory: mockMailerService,
+        },
+        {
+          provide: ConfigService,
+          useFactory: mockConfigService,
+        },
       ],
     }).compile();
 
@@ -66,15 +85,15 @@ describe('Password Reset Flow (Unit)', () => {
     resetTokenRepo = module.get(getRepositoryToken(PasswordResetToken));
     usersService = module.get<UsersService>(UsersService);
     tokenService = module.get<TokenService>(TokenService);
+    mailerService = module.get<MailerService>(MailerService);
   });
 
   describe('forgotPassword', () => {
-    it('should generate a token, save its SHA-256 hash, and log it to the console when user exists', async () => {
+    it('should generate a token, save its SHA-256 hash, and send exactly one reset email when user exists', async () => {
       const email = 'existing@example.com';
       const mockUser = { id: 42, email, name: 'Test User' };
       usersService.findByEmail.mockResolvedValue(mockUser);
       resetTokenRepo.save.mockResolvedValue({});
-      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
 
       await authService.forgotPassword(email);
 
@@ -86,11 +105,17 @@ describe('Password Reset Flow (Unit)', () => {
           expiresAt: expect.any(Date),
         }),
       );
-      expect(consoleLogSpy).toHaveBeenCalled();
-      consoleLogSpy.mockRestore();
+      expect(mailerService.sendPasswordReset).toHaveBeenCalledTimes(1);
+      expect(mailerService.sendPasswordReset).toHaveBeenCalledWith(
+        email,
+        expect.objectContaining({
+          name: mockUser.name,
+          resetUrl: expect.stringContaining('/reset-password?token='),
+        }),
+      );
     });
 
-    it('should return early without generating or saving a token if the user does not exist (no user enumeration)', async () => {
+    it('should return early without generating a token or sending mail if the user does not exist (no user enumeration)', async () => {
       const email = 'nonexistent@example.com';
       usersService.findByEmail.mockResolvedValue(null);
 
@@ -98,6 +123,19 @@ describe('Password Reset Flow (Unit)', () => {
 
       expect(usersService.findByEmail).toHaveBeenCalledWith(email);
       expect(resetTokenRepo.save).not.toHaveBeenCalled();
+      expect(mailerService.sendPasswordReset).not.toHaveBeenCalled();
+    });
+
+    it('still resolves (HTTP 200 path) even if the mailer throws', async () => {
+      const email = 'existing@example.com';
+      const mockUser = { id: 42, email, name: 'Test User' };
+      usersService.findByEmail.mockResolvedValue(mockUser);
+      resetTokenRepo.save.mockResolvedValue({});
+      mailerService.sendPasswordReset.mockRejectedValue(
+        new Error('SMTP down'),
+      );
+
+      await expect(authService.forgotPassword(email)).resolves.toBeUndefined();
     });
   });
 

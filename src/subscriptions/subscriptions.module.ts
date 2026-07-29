@@ -5,9 +5,15 @@ import { User } from '../users/user.entity';
 import { SubscriptionsService } from './subscriptions.service';
 import { SubscriptionsController } from './subscriptions.controller';
 import { CreatorsController } from './creators.controller';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { MailerModule } from '../mailer/mailer.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Subscription, User])],
+  imports: [
+    TypeOrmModule.forFeature([Subscription, User]),
+    NotificationsModule,
+    MailerModule,
+  ],
   providers: [SubscriptionsService],
   controllers: [SubscriptionsController, CreatorsController],
   exports: [SubscriptionsService],

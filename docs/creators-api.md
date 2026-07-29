@@ -104,7 +104,11 @@ curl http://localhost:3000/creators/jane_doe
 
 Errors:
 
-- `404 Not Found` — no creator with that handle.
+- `404 Not Found` (`code: "CREATOR_NOT_FOUND"`) — no creator with that
+  handle. Returned uniformly for a malformed handle, an unknown handle, a
+  profile that hasn't finished onboarding, or a soft-deleted owning
+  account — see [`post-visibility.md`](./post-visibility.md#handle-resolution)
+  for why these are not distinguished.
 
 ### PATCH /creators/me
 

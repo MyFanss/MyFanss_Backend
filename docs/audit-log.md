@@ -37,6 +37,8 @@ Currently logged actions (defined in `AuditAction` enum):
 | `USER_ROLE_CHANGED` | `PATCH /users/:id/role` | `{ before: string, after: string }` |
 | `USER_DELETED` | `DELETE /users/:id` | `{ email: string }` |
 | `USER_LOGIN_FAILED` | `POST /auth/login` (on invalid credentials) | `{ email: string }` |
+| `POST_SOFT_DELETED` | `DELETE /creators/me/posts/:id` | — |
+| `POST_RESTORED` | `POST /creators/me/posts/:id/restore` | — |
 
 ### Adding a New Action
 

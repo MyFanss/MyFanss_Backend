@@ -4,7 +4,10 @@ export class PostResponseDto {
   @ApiProperty({ example: 1, description: 'Unique post ID' })
   id: number;
 
-  @ApiProperty({ example: 7, description: 'ID of the creator who owns this post' })
+  @ApiProperty({
+    example: 7,
+    description: 'ID of the creator who owns this post',
+  })
   creatorId: number;
 
   @ApiProperty({ example: 'Behind the scenes', description: 'Post title' })
@@ -37,9 +40,22 @@ export class PostResponseDto {
   })
   publishedAt: Date | null;
 
-  @ApiProperty({ example: '2024-06-15T11:50:00.000Z', description: 'Creation timestamp' })
+  @ApiProperty({
+    example: '2024-06-15T11:50:00.000Z',
+    description: 'Creation timestamp',
+  })
   createdAt: Date;
 
-  @ApiProperty({ example: '2024-06-15T12:05:00.000Z', description: 'Last update timestamp' })
+  @ApiProperty({
+    example: '2024-06-15T12:05:00.000Z',
+    description: 'Last update timestamp',
+  })
   updatedAt: Date;
+
+  @ApiPropertyOptional({
+    example: null,
+    description: 'When the post was soft-deleted, or null if active',
+    nullable: true,
+  })
+  deletedAt: Date | null;
 }

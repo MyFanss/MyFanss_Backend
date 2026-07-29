@@ -103,6 +103,7 @@ MyFans uses **JWT Bearer tokens**. Here is the full login → authorize cycle:
 | **Subscriptions** | Fan subscription management |
 | **Creators** | Creator onboarding, profiles, and analytics |
 | **Notifications** | Notification preferences |
+| **Tips** | Tip intents, confirmation, inbox and history |
 | **Audit** | Admin-only audit log access |
 | **Messaging** | Direct messages between fans and creators |
 

@@ -8,9 +8,7 @@ import { NotificationPreference } from 'src/notifications/notification-preferenc
 import { CreatorProfile } from 'src/creators/creator-profile.entity';
 import { PasswordResetToken } from 'src/auth/entities/password-reset-token.entity';
 import { ContentReport } from 'src/moderation/content-report.entity';
-import { Comment } from 'src/comments/comment.entity';
-import { Conversation } from 'src/messaging/conversation.entity';
-import { Message } from 'src/messaging/message.entity';
+import { Tip } from 'src/tips/tip.entity';
 import { DataSourceOptions } from 'typeorm';
 
 export function dataOption(configService: ConfigService): DataSourceOptions {
@@ -31,9 +29,7 @@ export function dataOption(configService: ConfigService): DataSourceOptions {
       CreatorProfile,
       PasswordResetToken,
       ContentReport,
-      Comment,
-      Conversation,
-      Message,
+      Tip,
     ],
     synchronize: true,
   };
