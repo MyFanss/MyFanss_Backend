@@ -153,6 +153,7 @@ describe('CreatorsService', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       } as CreatorProfile);
+      userRepo.findOne.mockResolvedValue({ id: 7, is_deleted: false } as User);
 
       const result = await service.getByHandle('jane_doe');
 
@@ -176,6 +177,98 @@ describe('CreatorsService', () => {
       await expect(service.getByHandle('ghost')).rejects.toBeInstanceOf(
         NotFoundException,
       );
+    });
+
+    it('normalizes case before resolving (case-insensitive handle lookup)', async () => {
+      creatorRepo.findOne.mockResolvedValue({
+        id: 'uuid-1',
+        userId: 7,
+        handle: 'creator_one',
+        displayName: null,
+        bio: null,
+        bannerUrl: null,
+        category: null,
+        isOnboarded: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as CreatorProfile);
+      userRepo.findOne.mockResolvedValue({ id: 7, is_deleted: false } as User);
+
+      await service.getByHandle('  Creator_One  ');
+
+      expect(creatorRepo.findOne).toHaveBeenCalledWith({
+        where: { handle: 'creator_one' },
+      });
+    });
+
+    it('throws NotFound (not BadRequest) for a malformed handle — no format oracle on the read path', async () => {
+      await expect(
+        service.getByHandle('has spaces / slashes'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(creatorRepo.findOne).not.toHaveBeenCalled();
+    });
+
+    it('treats a UUID-shaped input as just another unmatched handle (never as a primary key)', async () => {
+      creatorRepo.findOne.mockResolvedValue(null);
+
+      // A real CreatorProfile.id is a UUID containing hyphens, which the
+      // handle format never allows — so this 404s like any other unknown
+      // handle instead of being silently resolved as a primary key lookup.
+      await expect(
+        service.getByHandle('123e4567-e89b-12d3-a456-426614174000'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(creatorRepo.findOne).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFound when the profile has not completed onboarding', async () => {
+      creatorRepo.findOne.mockResolvedValue({
+        id: 'uuid-1',
+        userId: 7,
+        handle: 'creator_one',
+        isOnboarded: false,
+      } as CreatorProfile);
+
+      await expect(service.getByHandle('creator_one')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+
+    it('throws NotFound when the owning user account is soft-deleted', async () => {
+      creatorRepo.findOne.mockResolvedValue({
+        id: 'uuid-1',
+        userId: 7,
+        handle: 'creator_one',
+        isOnboarded: true,
+      } as CreatorProfile);
+      userRepo.findOne.mockResolvedValue({ id: 7, is_deleted: true } as User);
+
+      await expect(service.getByHandle('creator_one')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('getCreatorUserIdByHandle', () => {
+    it('resolves to the underlying userId for posts/visibility to consume', async () => {
+      creatorRepo.findOne.mockResolvedValue({
+        id: 'uuid-1',
+        userId: 42,
+        handle: 'creator_one',
+        isOnboarded: true,
+      } as CreatorProfile);
+      userRepo.findOne.mockResolvedValue({ id: 42, is_deleted: false } as User);
+
+      const userId = await service.getCreatorUserIdByHandle('creator_one');
+
+      expect(userId).toBe(42);
+    });
+
+    it('throws NotFound for an unknown handle, same as getByHandle', async () => {
+      creatorRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.getCreatorUserIdByHandle('ghost'),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 
