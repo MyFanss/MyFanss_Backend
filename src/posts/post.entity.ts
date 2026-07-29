@@ -13,9 +13,10 @@ import { User } from '../users/user.entity';
 type Visibility = 'public' | 'subscribers';
 
 @Entity('posts')
-@Index(['creatorId', 'publishedAt'])
-@Index(['visibility', 'publishedAt'])
+@Index(['creatorId', 'publishedAt'], { where: '"deletedAt" IS NULL' })
+@Index(['visibility', 'publishedAt'], { where: '"deletedAt" IS NULL' })
 @Index(['creatorId', 'visibility'])
+@Index(['creatorId', 'deletedAt'])
 export class Post {
   @PrimaryGeneratedColumn('identity')
   id: number;
@@ -51,4 +52,10 @@ export class Post {
 
   @UpdateDateColumn({ type: 'timestamp' })
   updatedAt: Date;
+
+  @Column({ type: 'timestamp', nullable: true, default: null })
+  deletedAt: Date | null;
+
+  @Column({ type: 'int', nullable: true, default: null })
+  deletedById: number | null;
 }

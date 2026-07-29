@@ -74,6 +74,30 @@ export class PostsController {
     );
   }
 
+  @Get('me/posts/archived')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Get soft-deleted posts by authenticated creator (paginated)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Archived posts retrieved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 10 })
+  async getArchivedPosts(
+    @Query() query: PaginationQueryDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.postsService.getArchivedPosts(
+      req.user.userId,
+      query.page,
+      query.limit,
+    );
+  }
+
   @Get(':handle/posts')
   @ApiOperation({
     summary:
@@ -122,8 +146,13 @@ export class PostsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @HttpCode(204)
-  @ApiOperation({ summary: 'Delete a post' })
-  @ApiResponse({ status: 204, description: 'Post deleted successfully' })
+  @ApiOperation({
+    summary: 'Soft-delete a post (moves it to the archive, idempotent)',
+  })
+  @ApiResponse({
+    status: 204,
+    description: 'Post soft-deleted (or already deleted)',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({
     status: 403,
@@ -136,5 +165,26 @@ export class PostsController {
     @Req() req: AuthenticatedRequest,
   ) {
     await this.postsService.deletePost(postId, req.user.userId);
+  }
+
+  @Post('me/posts/:id/restore')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Restore a soft-deleted post' })
+  @ApiResponse({ status: 200, description: 'Post restored successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: "Cannot restore another creator's post",
+  })
+  @ApiResponse({ status: 404, description: 'Post not found' })
+  @ApiResponse({ status: 409, description: 'Post is not deleted' })
+  @ApiParam({ name: 'id', description: 'Post ID' })
+  async restorePost(
+    @Param('id', ParseIntPipe) postId: number,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.postsService.restorePost(postId, req.user.userId);
   }
 }
