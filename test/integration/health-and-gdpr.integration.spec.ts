@@ -69,7 +69,11 @@ describe('Health Probes & GDPR (integration)', () => {
     it('returns exported user data excluding password hash', async () => {
       const signupRes = await request(ctx.app.getHttpServer())
         .post('/auth/signup')
-        .send({ name: 'GDPR User', email: `gdpr.${Date.now()}@test.com`, password: PASSWORD })
+        .send({
+          name: 'GDPR User',
+          email: `gdpr.${Date.now()}@test.com`,
+          password: PASSWORD,
+        })
         .expect(201);
 
       const accessToken: string = signupRes.body.accessToken;
@@ -93,15 +97,17 @@ describe('Health Probes & GDPR (integration)', () => {
 
   describe('DELETE /users/me', () => {
     it('returns 401 when not authenticated', async () => {
-      await request(ctx.app.getHttpServer())
-        .delete('/users/me')
-        .expect(401);
+      await request(ctx.app.getHttpServer()).delete('/users/me').expect(401);
     });
 
     it('soft-deletes the user and revokes tokens, returns 204', async () => {
       const signupRes = await request(ctx.app.getHttpServer())
         .post('/auth/signup')
-        .send({ name: 'SelfDelete User', email: `selfdel.${Date.now()}@test.com`, password: PASSWORD })
+        .send({
+          name: 'SelfDelete User',
+          email: `selfdel.${Date.now()}@test.com`,
+          password: PASSWORD,
+        })
         .expect(201);
 
       const accessToken: string = signupRes.body.accessToken;

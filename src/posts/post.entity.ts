@@ -13,9 +13,10 @@ import { User } from '../users/user.entity';
 type Visibility = 'public' | 'subscribers';
 
 @Entity('posts')
-@Index(['creatorId', 'publishedAt'])
-@Index(['visibility', 'publishedAt'])
+@Index(['creatorId', 'publishedAt'], { where: '"deletedAt" IS NULL' })
+@Index(['visibility', 'publishedAt'], { where: '"deletedAt" IS NULL' })
 @Index(['creatorId', 'visibility'])
+@Index(['creatorId', 'deletedAt', 'publishedAt'])
 export class Post {
   @PrimaryGeneratedColumn('identity')
   id: number;
@@ -51,4 +52,12 @@ export class Post {
 
   @UpdateDateColumn({ type: 'timestamp' })
   updatedAt: Date;
+
+  /**
+   * Soft-delete marker. Rows are never hard-deleted so moderation/audit
+   * references (e.g. content reports by post id) remain resolvable; all read
+   * paths must filter deletedAt IS NULL.
+   */
+  @Column({ type: 'timestamp', nullable: true })
+  deletedAt: Date | null;
 }

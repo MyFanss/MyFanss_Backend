@@ -153,6 +153,19 @@ export class SubscriptionsService {
     };
   }
 
+  /**
+   * Single fan->creator membership check used by post visibility. Deliberately
+   * a single indexed lookup (backed by the unique (fanId, creatorId) index)
+   * rather than loading subscriber lists, so callers can check visibility
+   * once per request instead of once per post (avoids N+1 on post lists).
+   */
+  async isActiveSubscriber(fanId: number, creatorId: number): Promise<boolean> {
+    const count = await this.subscriptionRepository.count({
+      where: { fanId, creatorId, status: 'active' },
+    });
+    return count > 0;
+  }
+
   private normalizePagination(query: SubscriptionQueryDto): {
     page: number;
     limit: number;

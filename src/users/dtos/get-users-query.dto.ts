@@ -129,7 +129,8 @@ export class GetUsersQueryDto {
   page?: number;
 
   @ApiPropertyOptional({
-    description: 'DEPRECATED – use limit instead. Page size for offset pagination',
+    description:
+      'DEPRECATED – use limit instead. Page size for offset pagination',
     example: 20,
     deprecated: true,
     minimum: 1,
