@@ -19,6 +19,14 @@ const envSchema = Joi.object({
   TIP_PLATFORM_FEE_BPS: Joi.number().integer().min(0).max(10000).default(500),
   TIP_MIN_AMOUNT_CENTS: Joi.number().integer().min(1).default(100),
   TIP_MAX_AMOUNT_CENTS: Joi.number().integer().min(1).default(100000),
+  MAILER_DRIVER: Joi.string().valid('console', 'smtp').default('console'),
+  SMTP_HOST: Joi.string().optional(),
+  SMTP_PORT: Joi.number().port().optional(),
+  SMTP_SECURE: Joi.string().valid('true', 'false').optional(),
+  SMTP_USER: Joi.string().allow('').optional(),
+  SMTP_PASS: Joi.string().allow('').optional(),
+  SMTP_FROM: Joi.string().optional(),
+  MAILER_TIMEOUT_MS: Joi.number().integer().min(1).default(10000),
 });
 
 function assertJwtConfig(value: Record<string, unknown>): void {
