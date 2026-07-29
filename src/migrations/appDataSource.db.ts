@@ -8,6 +8,8 @@ import { NotificationPreference } from 'src/notifications/notification-preferenc
 import { CreatorProfile } from 'src/creators/creator-profile.entity';
 import { PasswordResetToken } from 'src/auth/entities/password-reset-token.entity';
 import { ContentReport } from 'src/moderation/content-report.entity';
+import { BillingWebhookEvent } from 'src/billing-webhooks/billing-webhook-event.entity';
+import { BillingCustomerMap } from 'src/billing-webhooks/billing-customer-map.entity';
 import { DataSourceOptions } from 'typeorm';
 
 export function dataOption(configService: ConfigService): DataSourceOptions {
@@ -28,6 +30,8 @@ export function dataOption(configService: ConfigService): DataSourceOptions {
       CreatorProfile,
       PasswordResetToken,
       ContentReport,
+      BillingWebhookEvent,
+      BillingCustomerMap,
     ],
     synchronize: true,
   };

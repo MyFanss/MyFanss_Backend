@@ -8,7 +8,7 @@ import {
 } from 'typeorm';
 import { User } from '../users/user.entity';
 
-export type SubscriptionStatus = 'active' | 'cancelled';
+export type SubscriptionStatus = 'active' | 'cancelled' | 'past_due';
 
 @Entity('subscriptions')
 // One row per fan+creator pair. Re-subscribing reactivates the same row, so a
