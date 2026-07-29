@@ -20,6 +20,7 @@ import { AuditModule } from './audit/audit.module';
 import { AdminModule } from './admin/admin.module';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { UploadsModule } from './uploads/uploads.module';
+import { ModerationModule } from './moderation/moderation.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { UploadsModule } from './uploads/uploads.module';
     AuditModule,
     AdminModule,
     UploadsModule,
+    ModerationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

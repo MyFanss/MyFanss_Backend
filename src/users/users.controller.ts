@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -10,15 +11,16 @@ import {
   UseGuards,
   Query,
   Header,
-  HttpCode,
   ForbiddenException,
   Req,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { UsersService } from './users.service';
+import { GdprService } from './services/gdpr.service';
 import { CreateUserDto } from './dtos/createUser.dto';
 import { UpdateProfileDto } from './dtos/updateProfile.dto';
 import { UserResponseDto } from './dtos/userResponse.dto';
+import { UserExportResponseDto } from './dtos/user-export-response.dto';
 import { GetUsersQueryDto } from './dtos/get-users-query.dto';
 import { PaginatedResponseDto } from './dtos/paginated-response.dto';
 import { UpdateUserDto } from './dtos/updateUser.dto';
@@ -43,7 +45,10 @@ import {
 @ApiBearerAuth('JWT-auth')
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly gdprService: GdprService,
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -301,40 +306,38 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @HttpCode(200)
   @ApiOperation({
-    summary: 'GDPR data export',
+    summary: 'Export my personal data (GDPR-style)',
     description:
-      'Returns the authenticated user profile (excluding password hash), notification preferences, and subscriptions.',
+      'Returns JSON of the authenticated user&#39;s profile, notification preferences, and subscriptions. Password hashes and tokens are excluded.',
   })
   @ApiResponse({
     status: 200,
     description: 'User data exported successfully',
+    type: UserExportResponseDto,
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   async exportMyData(
-    @Req() req: Request & { user: { userId: number } },
-  ): Promise<{
-    profile: Record<string, unknown>;
-    preferences: Record<string, unknown> | null;
-    subscriptions: Record<string, unknown>[];
-  }> {
-    return this.usersService.exportMyData(req.user.userId);
+    @CurrentUser() currentUser: { userId: number; email: string; role: string },
+  ): Promise<UserExportResponseDto> {
+    return this.gdprService.exportUserData(currentUser.userId);
   }
 
   @Delete('me')
   @UseGuards(JwtAuthGuard)
   @HttpCode(204)
   @ApiOperation({
-    summary: 'GDPR self-delete',
+    summary: 'Delete my own account (soft delete)',
     description:
-      'Soft-deletes the authenticated user account and revokes all active sessions. Returns 204 with no content.',
+      'Soft-deletes the authenticated user&#39;s account, revokes all active sessions, and returns 204. The deleted user cannot authenticate afterward.',
   })
-  @ApiResponse({ status: 204, description: 'Account deleted successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'User not found' })
-  async deleteMe(
-    @Req() req: Request & { user: { userId: number } },
+  @ApiResponse({
+    status: 204,
+    description: 'Account deleted successfully',
+  })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  async deleteMyAccount(
+    @CurrentUser() currentUser: { userId: number; email: string; role: string },
   ): Promise<void> {
-    await this.usersService.softDeleteAndRevokeSessions(req.user.userId);
+    await this.gdprService.selfDeleteUser(currentUser.userId);
   }
 }

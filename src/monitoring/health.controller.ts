@@ -1,15 +1,14 @@
 import { Controller, Get } from '@nestjs/common';
 import {
+  HealthCheck,
   HealthCheckService,
   TypeOrmHealthIndicator,
-  HealthCheck,
 } from '@nestjs/terminus';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ExemptTier } from '../common/throttle/tiers.decorator';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('Health')
 @Controller('health')
-@ExemptTier()
 export class HealthController {
   constructor(
     private readonly health: HealthCheckService,
@@ -17,12 +16,9 @@ export class HealthController {
   ) {}
 
   @Get('live')
-  @ApiOperation({
-    summary: 'Liveness probe',
-    description: 'Returns 200 when the process is up, no DB check required.',
-  })
-  @ApiResponse({ status: 200, description: 'Application is alive' })
-  getLive(): { status: string; timestamp: string } {
+  @ExemptTier()
+  @ApiOperation({ summary: 'Liveness probe — returns 200 when process is up' })
+  checkLiveness(): { status: string; timestamp: string } {
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
@@ -30,17 +26,12 @@ export class HealthController {
   }
 
   @Get('ready')
+  @ExemptTier()
   @HealthCheck()
   @ApiOperation({
-    summary: 'Readiness probe',
-    description:
-      'Returns 200 when PostgreSQL is reachable, 503 when it is not.',
+    summary: 'Readiness probe — returns 200 when DB is reachable, 503 otherwise',
   })
-  @ApiResponse({ status: 200, description: 'Application is ready' })
-  @ApiResponse({ status: 503, description: 'Database is unreachable' })
-  checkReady() {
-    return this.health.check([
-      () => this.db.pingCheck('postgres', { timeout: 5000 }),
-    ]);
+  checkReadiness() {
+    return this.health.check([() => this.db.pingCheck('database')]);
   }
 }
