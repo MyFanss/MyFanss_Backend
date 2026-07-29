@@ -9,13 +9,28 @@ import { Repository } from 'typeorm';
 import { SubscriptionsService } from './subscriptions.service';
 import { Subscription } from './subscription.entity';
 import { User } from '../users/user.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { MailerService } from '../mailer/mailer.service';
 
 describe('SubscriptionsService', () => {
   let service: SubscriptionsService;
   let subscriptionRepo: jest.Mocked<Repository<Subscription>>;
   let userRepo: jest.Mocked<Repository<User>>;
+  let notificationsService: jest.Mocked<
+    Pick<NotificationsService, 'shouldNotify'>
+  >;
+  let mailerService: jest.Mocked<
+    Pick<MailerService, 'sendNewSubscriberNotification'>
+  >;
 
   beforeEach(async () => {
+    notificationsService = { shouldNotify: jest.fn().mockResolvedValue(true) };
+    mailerService = {
+      sendNewSubscriberNotification: jest
+        .fn()
+        .mockResolvedValue({ accepted: true }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SubscriptionsService,
@@ -35,6 +50,8 @@ describe('SubscriptionsService', () => {
             findOne: jest.fn(),
           },
         },
+        { provide: NotificationsService, useValue: notificationsService },
+        { provide: MailerService, useValue: mailerService },
       ],
     }).compile();
 
@@ -123,6 +140,98 @@ describe('SubscriptionsService', () => {
       expect(subscriptionRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({ id: 'uuid-1', status: 'active' }),
       );
+    });
+  });
+
+  describe('new subscriber mail notification', () => {
+    const creator = {
+      id: 2,
+      name: 'Creator',
+      email: 'creator@example.com',
+    } as User;
+
+    it('sends creator mail when preferences.newSubscriber is true', async () => {
+      userRepo.findOne.mockResolvedValue(creator);
+      subscriptionRepo.findOne.mockResolvedValue(null);
+      subscriptionRepo.create.mockReturnValue({
+        fanId: 1,
+        creatorId: 2,
+        status: 'active',
+        cancelledAt: null,
+      } as Subscription);
+      subscriptionRepo.save.mockResolvedValue({
+        id: 'uuid-1',
+        fanId: 1,
+        creatorId: 2,
+        status: 'active',
+        cancelledAt: null,
+        subscribedAt: new Date(),
+      } as Subscription);
+      notificationsService.shouldNotify.mockResolvedValue(true);
+
+      await service.subscribe(1, { creatorId: 2 });
+
+      expect(notificationsService.shouldNotify).toHaveBeenCalledWith(
+        2,
+        'newSubscriber',
+      );
+      expect(mailerService.sendNewSubscriberNotification).toHaveBeenCalledWith(
+        creator.email,
+        expect.objectContaining({ creatorName: creator.name }),
+      );
+    });
+
+    it('does not send creator mail when preferences.newSubscriber is false', async () => {
+      userRepo.findOne.mockResolvedValue(creator);
+      subscriptionRepo.findOne.mockResolvedValue(null);
+      subscriptionRepo.create.mockReturnValue({
+        fanId: 1,
+        creatorId: 2,
+        status: 'active',
+        cancelledAt: null,
+      } as Subscription);
+      subscriptionRepo.save.mockResolvedValue({
+        id: 'uuid-1',
+        fanId: 1,
+        creatorId: 2,
+        status: 'active',
+        cancelledAt: null,
+        subscribedAt: new Date(),
+      } as Subscription);
+      notificationsService.shouldNotify.mockResolvedValue(false);
+
+      await service.subscribe(1, { creatorId: 2 });
+
+      expect(
+        mailerService.sendNewSubscriberNotification,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('still returns the subscription when the mailer throws', async () => {
+      userRepo.findOne.mockResolvedValue(creator);
+      subscriptionRepo.findOne.mockResolvedValue(null);
+      subscriptionRepo.create.mockReturnValue({
+        fanId: 1,
+        creatorId: 2,
+        status: 'active',
+        cancelledAt: null,
+      } as Subscription);
+      subscriptionRepo.save.mockResolvedValue({
+        id: 'uuid-1',
+        fanId: 1,
+        creatorId: 2,
+        status: 'active',
+        cancelledAt: null,
+        subscribedAt: new Date(),
+      } as Subscription);
+      notificationsService.shouldNotify.mockResolvedValue(true);
+      mailerService.sendNewSubscriberNotification.mockRejectedValue(
+        new Error('SMTP down'),
+      );
+
+      const result = await service.subscribe(1, { creatorId: 2 });
+
+      expect(result).toMatchObject({ id: 'uuid-1', status: 'active' });
     });
   });
 

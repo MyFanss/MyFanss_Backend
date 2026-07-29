@@ -5,6 +5,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../users/users.service';
 import { SignupDto } from './dto/signup.dto';
 import { TokenService, TokenPair } from './token.service';
@@ -15,6 +16,7 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { UserRole } from './enums/role.enum';
+import { MailerService } from '../mailer/mailer.service';
 
 export interface AuthResponse extends TokenPair {
   user: { id: number; name: string; email: string; role: UserRole };
@@ -35,6 +37,8 @@ export class AuthService {
     private readonly tokenService: TokenService,
     @InjectRepository(PasswordResetToken)
     private readonly passwordResetTokenRepository: Repository<PasswordResetToken>,
+    private readonly mailerService: MailerService,
+    private readonly configService: ConfigService,
   ) {}
 
   async forgotPassword(email: string): Promise<void> {
@@ -53,8 +57,20 @@ export class AuthService {
       expiresAt,
     });
 
-    // Log token in dev mode (stub email delivery)
-    console.log(`Password reset token for ${email}: ${token}`);
+    const baseUrl =
+      this.configService.get<string>('PUBLIC_BASE_URL') ??
+      'http://localhost:3000';
+    const resetUrl = `${baseUrl}/reset-password?token=${token}`;
+
+    // Mail failures must never fail the (always-200) forgot-password request.
+    try {
+      await this.mailerService.sendPasswordReset(email, {
+        name: user.name,
+        resetUrl,
+      });
+    } catch {
+      // MailerService already logs/records failures internally.
+    }
   }
 
   async resetPassword(token: string, newPassword: string): Promise<void> {
