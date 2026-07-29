@@ -12,7 +12,9 @@ import {
   Query,
   Header,
   ForbiddenException,
+  Req,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { UsersService } from './users.service';
 import { GdprService } from './services/gdpr.service';
 import { CreateUserDto } from './dtos/createUser.dto';
