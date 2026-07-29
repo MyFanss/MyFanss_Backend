@@ -125,6 +125,12 @@ export async function teardownIntegrationApp(
 /** Wipes all tables between tests so specs are order-independent. */
 export async function clearAll(dataSource: DataSource): Promise<void> {
   await dataSource.query(
+    'TRUNCATE TABLE "notification_preferences" RESTART IDENTITY CASCADE',
+  );
+  await dataSource.query(
+    'TRUNCATE TABLE "subscriptions" RESTART IDENTITY CASCADE',
+  );
+  await dataSource.query(
     'TRUNCATE TABLE "refresh_tokens" RESTART IDENTITY CASCADE',
   );
   await dataSource.query('TRUNCATE TABLE "users" RESTART IDENTITY CASCADE');

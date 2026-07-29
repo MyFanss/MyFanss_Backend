@@ -31,7 +31,7 @@ describe('GdprService', () => {
     created_at: new Date('2024-01-15T10:30:00.000Z'),
     updated_at: new Date('2024-06-01T08:00:00.000Z'),
     is_deleted: false,
-    search_text: "",
+    search_text: '',
     displayName: 'JaneDoe',
     bio: 'Content creator',
     avatarUrl: 'https://cdn.example.com/avatars/jane.jpg',
@@ -73,7 +73,10 @@ describe('GdprService', () => {
         GdprService,
         { provide: getRepositoryToken(User), useValue: userRepo },
         { provide: getRepositoryToken(RefreshToken), useValue: tokenRepo },
-        { provide: getRepositoryToken(NotificationPreference), useValue: prefRepo },
+        {
+          provide: getRepositoryToken(NotificationPreference),
+          useValue: prefRepo,
+        },
         { provide: getRepositoryToken(Subscription), useValue: subRepo },
         { provide: AuditService, useValue: auditService },
         { provide: AppLogger, useValue: logger },
@@ -86,7 +89,9 @@ describe('GdprService', () => {
   describe('exportUserData', () => {
     it('should throw NotFoundException when user does not exist', async () => {
       userRepo.findOneBy.mockResolvedValue(null);
-      await expect(service.exportUserData(999)).rejects.toThrow(NotFoundException);
+      await expect(service.exportUserData(999)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should return user profile without password hash', async () => {
@@ -135,7 +140,12 @@ describe('GdprService', () => {
       subRepo.find.mockResolvedValue([]);
       await service.exportUserData(1);
       expect(auditService.log).toHaveBeenCalledWith(
-        expect.objectContaining({ actorId: 1, action: AuditAction.GDPR_DATA_EXPORTED, targetType: 'User', targetId: 1 }),
+        expect.objectContaining({
+          actorId: 1,
+          action: AuditAction.GDPR_DATA_EXPORTED,
+          targetType: 'User',
+          targetId: 1,
+        }),
       );
     });
 
@@ -152,12 +162,18 @@ describe('GdprService', () => {
   describe('selfDeleteUser', () => {
     it('should throw NotFoundException when user does not exist', async () => {
       userRepo.findOneBy.mockResolvedValue(null);
-      await expect(service.selfDeleteUser(999)).rejects.toThrow(NotFoundException);
+      await expect(service.selfDeleteUser(999)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should soft-delete the user', async () => {
       userRepo.findOneBy.mockResolvedValue(mockUser);
-      userRepo.save.mockResolvedValue({ ...mockUser, is_deleted: true, status: 'inactive' });
+      userRepo.save.mockResolvedValue({
+        ...mockUser,
+        is_deleted: true,
+        status: 'inactive',
+      });
       await service.selfDeleteUser(1);
       expect(userRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({ is_deleted: true, status: 'inactive' }),
@@ -169,7 +185,8 @@ describe('GdprService', () => {
       userRepo.save.mockResolvedValue(mockUser);
       await service.selfDeleteUser(1);
       expect(tokenRepo.update).toHaveBeenCalledWith(
-        { userId: 1, isRevoked: false }, { isRevoked: true },
+        { userId: 1, isRevoked: false },
+        { isRevoked: true },
       );
     });
 
@@ -178,7 +195,12 @@ describe('GdprService', () => {
       userRepo.save.mockResolvedValue(mockUser);
       await service.selfDeleteUser(1);
       expect(auditService.log).toHaveBeenCalledWith(
-        expect.objectContaining({ actorId: 1, action: AuditAction.USER_SELF_DELETED, targetType: 'User', targetId: 1 }),
+        expect.objectContaining({
+          actorId: 1,
+          action: AuditAction.USER_SELF_DELETED,
+          targetType: 'User',
+          targetId: 1,
+        }),
       );
     });
   });

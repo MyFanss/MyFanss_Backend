@@ -1,19 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PostsService } from './posts.service';
 import { Post } from './post.entity';
-import { AuditService } from '../audit/audit.service';
-import { AuditAction } from '../audit/audit-action.enum';
-import {
-  NotFoundException,
-  ForbiddenException,
-  ConflictException,
-} from '@nestjs/common';
+import { CreatorsService } from '../creators/creators.service';
+import { PostVisibilityService } from './post-visibility.service';
 
 describe('PostsService', () => {
   let service: PostsService;
   let mockPostsRepo: any;
-  let mockAuditService: any;
+  let creatorsService: jest.Mocked<
+    Pick<CreatorsService, 'getCreatorUserIdByHandle'>
+  >;
+  let visibilityService: jest.Mocked<
+    Pick<PostVisibilityService, 'canViewSubscriberContent' | 'canViewPost'>
+  >;
 
   const mockPost = {
     id: 1,
@@ -26,7 +27,6 @@ describe('PostsService', () => {
     createdAt: new Date(),
     updatedAt: new Date(),
     deletedAt: null,
-    deletedById: null,
   };
 
   beforeEach(async () => {
@@ -39,8 +39,13 @@ describe('PostsService', () => {
       remove: jest.fn(),
     };
 
-    mockAuditService = {
-      log: jest.fn().mockResolvedValue(undefined),
+    creatorsService = {
+      getCreatorUserIdByHandle: jest.fn(),
+    };
+
+    visibilityService = {
+      canViewSubscriberContent: jest.fn(),
+      canViewPost: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -50,10 +55,8 @@ describe('PostsService', () => {
           provide: getRepositoryToken(Post),
           useValue: mockPostsRepo,
         },
-        {
-          provide: AuditService,
-          useValue: mockAuditService,
-        },
+        { provide: CreatorsService, useValue: creatorsService },
+        { provide: PostVisibilityService, useValue: visibilityService },
       ],
     }).compile();
 
@@ -115,7 +118,7 @@ describe('PostsService', () => {
   });
 
   describe('getCreatorPosts', () => {
-    it('should return paginated posts', async () => {
+    it('should return paginated posts for creator, filtering deleted posts', async () => {
       const posts = [mockPost];
       mockPostsRepo.findAndCount.mockResolvedValue([posts, 1]);
 
@@ -126,6 +129,11 @@ describe('PostsService', () => {
       expect(result.page).toBe(1);
       expect(result.limit).toBe(10);
       expect(result.totalPages).toBe(1);
+      expect(mockPostsRepo.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ creatorId: 1 }),
+        }),
+      );
     });
 
     it('should exclude soft-deleted posts', async () => {
@@ -149,73 +157,105 @@ describe('PostsService', () => {
     });
   });
 
-  describe('getArchivedPosts', () => {
-    it('should return only soft-deleted posts', async () => {
-      const deletedPost = { ...mockPost, id: 2, deletedAt: new Date() };
-      mockPostsRepo.findAndCount.mockResolvedValue([[deletedPost], 1]);
+  describe('getPostsByHandle', () => {
+    function mockQueryBuilder(returned: [any[], number]) {
+      const qb = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue(returned),
+      };
+      mockPostsRepo.createQueryBuilder.mockReturnValue(qb);
+      return qb;
+    }
 
-      const result = await service.getArchivedPosts(1, 1, 10);
+    it('resolves the handle via CreatorsService, not by treating it as a primary key', async () => {
+      creatorsService.getCreatorUserIdByHandle.mockResolvedValue(1);
+      visibilityService.canViewSubscriberContent.mockResolvedValue(false);
+      mockQueryBuilder([[mockPost], 1]);
+
+      await service.getPostsByHandle('creator_one', undefined, 1, 10);
+
+      expect(creatorsService.getCreatorUserIdByHandle).toHaveBeenCalledWith(
+        'creator_one',
+      );
+    });
+
+    it('only returns public posts for an anonymous caller', async () => {
+      creatorsService.getCreatorUserIdByHandle.mockResolvedValue(1);
+      visibilityService.canViewSubscriberContent.mockResolvedValue(false);
+      const qb = mockQueryBuilder([[mockPost], 1]);
+
+      const result = await service.getPostsByHandle(
+        'creator_one',
+        undefined,
+        1,
+        10,
+      );
 
       expect(result.data).toHaveLength(1);
-      expect(result.total).toBe(1);
-      const callArgs = mockPostsRepo.findAndCount.mock.calls[0][0];
-      expect(callArgs.where.creatorId).toBe(1);
-      expect(callArgs.where.deletedAt._type).toBe('not');
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        expect.stringContaining('visibility'),
+        { visibility: 'public' },
+      );
+      expect(visibilityService.canViewSubscriberContent).toHaveBeenCalledWith(
+        undefined,
+        1,
+      );
+    });
+
+    it('checks subscriber access once per request, not once per post (no N+1)', async () => {
+      creatorsService.getCreatorUserIdByHandle.mockResolvedValue(1);
+      visibilityService.canViewSubscriberContent.mockResolvedValue(true);
+      const manyPosts = Array(20).fill(mockPost);
+      const qb = mockQueryBuilder([manyPosts, 20]);
+
+      await service.getPostsByHandle('creator_one', { userId: 42 }, 1, 20);
+
+      expect(visibilityService.canViewSubscriberContent).toHaveBeenCalledTimes(
+        1,
+      );
+      // No visibility-narrowing clause added once subscriber content is unlocked.
+      expect(qb.andWhere).not.toHaveBeenCalledWith(
+        expect.stringContaining('visibility'),
+        expect.anything(),
+      );
     });
   });
 
-  describe('getPublicCreatorPosts', () => {
-    it('should only return public posts for non-subscribers', async () => {
-      const publicPost = { ...mockPost, visibility: 'public' };
-      mockPostsRepo.createQueryBuilder.mockReturnValue({
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        skip: jest.fn().mockReturnThis(),
-        take: jest.fn().mockReturnThis(),
-        getManyAndCount: jest.fn().mockResolvedValue([[publicPost], 1]),
-      });
+  describe('getPostByHandle', () => {
+    it('returns 404 when the post does not exist for that creator', async () => {
+      creatorsService.getCreatorUserIdByHandle.mockResolvedValue(1);
+      mockPostsRepo.findOne.mockResolvedValue(null);
 
-      const result = await service.getPublicCreatorPosts(1, false, 1, 10);
-
-      expect(result.data).toHaveLength(1);
-      expect(result.total).toBe(1);
+      await expect(
+        service.getPostByHandle('creator_one', 999, undefined),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
 
-    it('should filter out soft-deleted posts', async () => {
-      const andWhere = jest.fn().mockReturnThis();
-      mockPostsRepo.createQueryBuilder.mockReturnValue({
-        where: jest.fn().mockReturnThis(),
-        andWhere,
-        orderBy: jest.fn().mockReturnThis(),
-        skip: jest.fn().mockReturnThis(),
-        take: jest.fn().mockReturnThis(),
-        getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
-      });
+    it('returns 404 (not 403) when the post exists but is not visible to the caller', async () => {
+      creatorsService.getCreatorUserIdByHandle.mockResolvedValue(1);
+      const subscriberPost = { ...mockPost, visibility: 'subscribers' };
+      mockPostsRepo.findOne.mockResolvedValue(subscriberPost);
+      visibilityService.canViewPost.mockResolvedValue(false);
 
-      await service.getPublicCreatorPosts(1, false, 1, 10);
-
-      expect(andWhere).toHaveBeenCalledWith('post.deletedAt IS NULL');
+      await expect(
+        service.getPostByHandle('creator_one', 1, undefined),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
 
-    it('should return all posts for subscribers', async () => {
-      const allPosts = [
-        mockPost,
-        { ...mockPost, id: 2, visibility: 'subscribers' },
-      ];
-      mockPostsRepo.createQueryBuilder.mockReturnValue({
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        skip: jest.fn().mockReturnThis(),
-        take: jest.fn().mockReturnThis(),
-        getManyAndCount: jest.fn().mockResolvedValue([allPosts, 2]),
+    it('returns the post when visible', async () => {
+      creatorsService.getCreatorUserIdByHandle.mockResolvedValue(1);
+      mockPostsRepo.findOne.mockResolvedValue(mockPost);
+      visibilityService.canViewPost.mockResolvedValue(true);
+
+      const result = await service.getPostByHandle('creator_one', 1, {
+        userId: 1,
       });
 
-      const result = await service.getPublicCreatorPosts(1, true, 1, 10);
-
-      expect(result.data).toHaveLength(2);
-      expect(result.total).toBe(2);
+      expect(result.id).toBe(1);
     });
   });
 
@@ -269,26 +309,15 @@ describe('PostsService', () => {
   });
 
   describe('deletePost', () => {
-    it('should soft-delete a post by owner', async () => {
+    it('soft-deletes a post by owner (sets deletedAt, never removes the row)', async () => {
       mockPostsRepo.findOne.mockResolvedValue({ ...mockPost });
-      mockPostsRepo.save.mockImplementation((p) => Promise.resolve(p));
+      mockPostsRepo.save.mockImplementation(async (p: any) => p);
 
       await service.deletePost(1, 1);
 
-      expect(mockPostsRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          deletedAt: expect.any(Date),
-          deletedById: 1,
-        }),
-      );
       expect(mockPostsRepo.remove).not.toHaveBeenCalled();
-      expect(mockAuditService.log).toHaveBeenCalledWith(
-        expect.objectContaining({
-          actorId: 1,
-          action: AuditAction.POST_SOFT_DELETED,
-          targetType: 'Post',
-          targetId: 1,
-        }),
+      expect(mockPostsRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ deletedAt: expect.any(Date) }),
       );
     });
 

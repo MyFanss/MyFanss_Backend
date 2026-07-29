@@ -16,7 +16,7 @@ type Visibility = 'public' | 'subscribers';
 @Index(['creatorId', 'publishedAt'], { where: '"deletedAt" IS NULL' })
 @Index(['visibility', 'publishedAt'], { where: '"deletedAt" IS NULL' })
 @Index(['creatorId', 'visibility'])
-@Index(['creatorId', 'deletedAt'])
+@Index(['creatorId', 'deletedAt', 'publishedAt'])
 export class Post {
   @PrimaryGeneratedColumn('identity')
   id: number;
@@ -53,9 +53,11 @@ export class Post {
   @UpdateDateColumn({ type: 'timestamp' })
   updatedAt: Date;
 
-  @Column({ type: 'timestamp', nullable: true, default: null })
+  /**
+   * Soft-delete marker. Rows are never hard-deleted so moderation/audit
+   * references (e.g. content reports by post id) remain resolvable; all read
+   * paths must filter deletedAt IS NULL.
+   */
+  @Column({ type: 'timestamp', nullable: true })
   deletedAt: Date | null;
-
-  @Column({ type: 'int', nullable: true, default: null })
-  deletedById: number | null;
 }

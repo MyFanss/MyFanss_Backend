@@ -4,7 +4,8 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UserPaginationDto {
   @ApiPropertyOptional({
-    description: 'Opaque cursor returned by previous page for keyset pagination',
+    description:
+      'Opaque cursor returned by previous page for keyset pagination',
     example: 'eyJpZCI6MTB9',
   })
   @IsOptional()

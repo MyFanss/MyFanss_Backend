@@ -16,6 +16,8 @@ import {
   PaginatedResponseDto,
   PaginationMetaDto,
 } from '../users/dtos/paginated-response.dto';
+import { NotificationsService } from '../notifications/notifications.service';
+import { MailerService } from '../mailer/mailer.service';
 
 @Injectable()
 export class SubscriptionsService {
@@ -24,6 +26,8 @@ export class SubscriptionsService {
     private readonly subscriptionRepository: Repository<Subscription>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly notificationsService: NotificationsService,
+    private readonly mailerService: MailerService,
   ) {}
 
   /**
@@ -68,6 +72,7 @@ export class SubscriptionsService {
       existing.cancelledAt = null;
       existing.subscribedAt = new Date();
       const reactivated = await this.subscriptionRepository.save(existing);
+      await this.notifyCreatorOfNewSubscriber(fanId, creator);
       return this.toResponse(reactivated);
     }
 
@@ -78,7 +83,34 @@ export class SubscriptionsService {
       cancelledAt: null,
     });
     const saved = await this.subscriptionRepository.save(subscription);
+    await this.notifyCreatorOfNewSubscriber(fanId, creator);
     return this.toResponse(saved);
+  }
+
+  /**
+   * Best-effort creator notification — gated on preferences.newSubscriber.
+   * Any failure here (pref lookup or mail send) is caught and logged so it
+   * never turns a successful subscribe into a failed HTTP response.
+   */
+  private async notifyCreatorOfNewSubscriber(
+    fanId: number,
+    creator: User,
+  ): Promise<void> {
+    try {
+      const shouldNotify = await this.notificationsService.shouldNotify(
+        creator.id,
+        'newSubscriber',
+      );
+      if (!shouldNotify) return;
+
+      const fan = await this.userRepository.findOne({ where: { id: fanId } });
+      await this.mailerService.sendNewSubscriberNotification(creator.email, {
+        creatorName: creator.name,
+        subscriberName: fan?.name ?? 'A fan',
+      });
+    } catch {
+      // Swallowed intentionally: mailer/prefs failures must not affect subscribe.
+    }
   }
 
   /**
@@ -151,6 +183,19 @@ export class SubscriptionsService {
       data,
       pagination: this.buildMeta(page, limit, totalCount),
     };
+  }
+
+  /**
+   * Single fan->creator membership check used by post visibility. Deliberately
+   * a single indexed lookup (backed by the unique (fanId, creatorId) index)
+   * rather than loading subscriber lists, so callers can check visibility
+   * once per request instead of once per post (avoids N+1 on post lists).
+   */
+  async isActiveSubscriber(fanId: number, creatorId: number): Promise<boolean> {
+    const count = await this.subscriptionRepository.count({
+      where: { fanId, creatorId, status: 'active' },
+    });
+    return count > 0;
   }
 
   private normalizePagination(query: SubscriptionQueryDto): {

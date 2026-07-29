@@ -21,7 +21,7 @@ import { AdminModule } from './admin/admin.module';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { UploadsModule } from './uploads/uploads.module';
 import { ModerationModule } from './moderation/moderation.module';
-import { BillingWebhooksModule } from './billing-webhooks/billing-webhooks.module';
+import { TipsModule } from './tips/tips.module';
 
 @Module({
   imports: [
@@ -51,7 +51,7 @@ import { BillingWebhooksModule } from './billing-webhooks/billing-webhooks.modul
     AdminModule,
     UploadsModule,
     ModerationModule,
-    BillingWebhooksModule,
+    TipsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
