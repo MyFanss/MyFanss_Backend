@@ -8,6 +8,8 @@ import {
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
 import { RefreshToken } from '../auth/entities/refresh-token.entity';
+import { Subscription } from '../subscriptions/subscription.entity';
+import { NotificationPreference } from '../notifications/notification-preference.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateUserDto } from './dtos/createUser.dto';
 import { UserResponseDto } from './dtos/userResponse.dto';
@@ -38,6 +40,10 @@ export class UsersService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(RefreshToken)
     private readonly refreshTokenRepository: Repository<RefreshToken>,
+    @InjectRepository(Subscription)
+    private readonly subscriptionRepository: Repository<Subscription>,
+    @InjectRepository(NotificationPreference)
+    private readonly notificationPreferenceRepository: Repository<NotificationPreference>,
     private readonly queryService: UsersQueryService,
     private readonly searchService: SearchService,
     private readonly permissionService: PermissionService,
@@ -172,6 +178,87 @@ export class UsersService {
     });
 
     return 'user deleted successfully...';
+  }
+
+  /**
+   * GDPR: Export all personal data for the authenticated user.
+   * Returns profile (without password hash), notification preferences, and subscriptions.
+   */
+  async exportMyData(
+    userId: number,
+  ): Promise<{
+    profile: Record<string, unknown>;
+    preferences: Record<string, unknown> | null;
+    subscriptions: Record<string, unknown>[];
+  }> {
+    const user = await this.userRepository.findOneBy({ id: userId });
+    if (!user) {
+      throw new NotFoundException('user not found');
+    }
+
+    // Exclude password hash, search text, and internal flags
+    const { password: _pw, search_text: _st, is_deleted: _del, ...profile } = user;
+
+    // Fetch notification preferences
+    const preferences = await this.notificationPreferenceRepository.findOneBy({
+      userId,
+    });
+
+    // Fetch subscriptions (active and cancelled)
+    const subscriptions = await this.subscriptionRepository.find({
+      where: { fanId: userId },
+      order: { subscribedAt: 'DESC' },
+    });
+
+    return {
+      profile: profile as unknown as Record<string, unknown>,
+      preferences: preferences
+        ? (preferences as unknown as Record<string, unknown>)
+        : null,
+      subscriptions: subscriptions.map((s) => ({
+        id: s.id,
+        creatorId: s.creatorId,
+        status: s.status,
+        subscribedAt: s.subscribedAt,
+        cancelledAt: s.cancelledAt,
+      })),
+    };
+  }
+
+  /**
+   * GDPR: Self-delete (soft delete) the authenticated user and revoke all
+   * active refresh tokens. Returns 204 No Content on success.
+   */
+  async softDeleteAndRevokeSessions(userId: number): Promise<void> {
+    const user = await this.userRepository.findOneBy({ id: userId });
+    if (!user) {
+      throw new NotFoundException('user not found');
+    }
+
+    // Soft delete
+    await this.userRepository.update(userId, { is_deleted: true });
+
+    // Revoke all active refresh tokens
+    await this.refreshTokenRepository.update(
+      { userId, isRevoked: false },
+      { isRevoked: true },
+    );
+
+    await this.invalidateUserRelatedCaches(userId);
+
+    // Audit the self-delete
+    void this.auditService.log({
+      actorId: userId,
+      action: AuditAction.USER_DELETED,
+      targetType: 'User',
+      targetId: userId,
+      metadata: { email: user.email, method: 'self-service' },
+    });
+
+    this.logger.log(
+      `User ${userId} (${user.email}) self-deleted and sessions revoked`,
+      UsersService.name,
+    );
   }
 
   async updateUser(

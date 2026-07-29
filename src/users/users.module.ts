@@ -5,6 +5,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
 import { User } from './user.entity';
 import { RefreshToken } from '../auth/entities/refresh-token.entity';
+import { Subscription } from '../subscriptions/subscription.entity';
+import { NotificationPreference } from '../notifications/notification-preference.entity';
 import { UsersQueryService } from './services/users-query.service';
 import { SearchService } from './services/search.service';
 import { PermissionService } from './services/permission.service';
@@ -13,7 +15,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, RefreshToken]),
+    TypeOrmModule.forFeature([User, RefreshToken, Subscription, NotificationPreference]),
     CacheModule.register(),
     AuditModule,
     NotificationsModule,

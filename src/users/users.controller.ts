@@ -12,7 +12,9 @@ import {
   Header,
   HttpCode,
   ForbiddenException,
+  Req,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dtos/createUser.dto';
 import { UpdateProfileDto } from './dtos/updateProfile.dto';
@@ -293,5 +295,46 @@ export class UsersController {
     }
 
     return this.usersService.updateProfile(id, updateProfileDto);
+  }
+
+  @Get('me/export')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'GDPR data export',
+    description:
+      'Returns the authenticated user profile (excluding password hash), notification preferences, and subscriptions.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User data exported successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async exportMyData(
+    @Req() req: Request & { user: { userId: number } },
+  ): Promise<{
+    profile: Record<string, unknown>;
+    preferences: Record<string, unknown> | null;
+    subscriptions: Record<string, unknown>[];
+  }> {
+    return this.usersService.exportMyData(req.user.userId);
+  }
+
+  @Delete('me')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(204)
+  @ApiOperation({
+    summary: 'GDPR self-delete',
+    description:
+      'Soft-deletes the authenticated user account and revokes all active sessions. Returns 204 with no content.',
+  })
+  @ApiResponse({ status: 204, description: 'Account deleted successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async deleteMe(
+    @Req() req: Request & { user: { userId: number } },
+  ): Promise<void> {
+    await this.usersService.softDeleteAndRevokeSessions(req.user.userId);
   }
 }
