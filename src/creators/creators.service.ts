@@ -78,13 +78,62 @@ export class CreatorsService {
    * identifiers.
    */
   async getByHandle(handle: string): Promise<CreatorResponseDto> {
-    const profile = await this.creatorRepository.findOne({
-      where: { handle: this.normalizeHandle(handle) },
-    });
-    if (!profile) {
-      throw new NotFoundException('Creator not found');
-    }
+    const profile = await this.resolveActiveProfileByHandle(handle);
     return this.toPublic(profile);
+  }
+
+  /**
+   * Internal resolution used by other modules (e.g. posts) that need the
+   * underlying user id for a handle. Single source of truth for "does this
+   * handle resolve to a visible creator" — no module should duplicate this
+   * lookup or fall back to treating the handle as a primary key.
+   */
+  async getCreatorUserIdByHandle(handle: string): Promise<number> {
+    const profile = await this.resolveActiveProfileByHandle(handle);
+    return profile.userId;
+  }
+
+  /**
+   * Resolves a handle to a live, onboarded, non-deleted creator profile.
+   *
+   * Every failure mode — malformed handle, unknown handle, not yet onboarded,
+   * or a soft-deleted owning account — collapses to the same 404 with a
+   * stable error code. This is deliberate: distinguishing "doesn't exist"
+   * from "exists but hidden" via status code would be an existence oracle for
+   * private/removed creators. Format validation with a distinct 400 remains
+   * only on the write path (onboarding), where it is ordinary input
+   * validation rather than a lookup.
+   */
+  private async resolveActiveProfileByHandle(
+    handle: string,
+  ): Promise<CreatorProfile> {
+    const normalized = (handle ?? '').trim().toLowerCase();
+
+    const notFound = () =>
+      new NotFoundException({
+        message: 'Creator not found',
+        code: 'CREATOR_NOT_FOUND',
+      });
+
+    if (!HANDLE_REGEX.test(normalized)) {
+      throw notFound();
+    }
+
+    const profile = await this.creatorRepository.findOne({
+      where: { handle: normalized },
+    });
+    if (!profile || !profile.isOnboarded) {
+      throw notFound();
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { id: profile.userId },
+    });
+    if (!user || user.is_deleted) {
+      throw notFound();
+    }
+
+    return profile;
   }
 
   /**

@@ -29,7 +29,8 @@ export class HealthController {
   @ExemptTier()
   @HealthCheck()
   @ApiOperation({
-    summary: 'Readiness probe — returns 200 when DB is reachable, 503 otherwise',
+    summary:
+      'Readiness probe — returns 200 when DB is reachable, 503 otherwise',
   })
   checkReadiness() {
     return this.health.check([() => this.db.pingCheck('database')]);

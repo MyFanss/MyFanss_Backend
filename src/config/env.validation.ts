@@ -16,6 +16,9 @@ const envSchema = Joi.object({
   JWT_ACCESS_EXPIRATION: Joi.string().min(1).optional(),
   JWT_REFRESH_SECRET: Joi.string().min(1).optional(),
   JWT_REFRESH_EXPIRATION: Joi.string().min(1).optional(),
+  TIP_PLATFORM_FEE_BPS: Joi.number().integer().min(0).max(10000).default(500),
+  TIP_MIN_AMOUNT_CENTS: Joi.number().integer().min(1).default(100),
+  TIP_MAX_AMOUNT_CENTS: Joi.number().integer().min(1).default(100000),
 });
 
 function assertJwtConfig(value: Record<string, unknown>): void {

@@ -5,20 +5,21 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Not, Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { Post } from './post.entity';
 import { CreatePostDto } from './dtos/create-post.dto';
 import { UpdatePostDto } from './dtos/update-post.dto';
 import { PaginatedPostsResponseDto } from './dtos/paginated-posts-response.dto';
 import { PostResponseDto } from './dtos/post-response.dto';
-import { AuditService } from '../audit/audit.service';
-import { AuditAction } from '../audit/audit-action.enum';
+import { CreatorsService } from '../creators/creators.service';
+import { PostVisibilityService, PostViewer } from './post-visibility.service';
 
 @Injectable()
 export class PostsService {
   constructor(
     @InjectRepository(Post) private postsRepo: Repository<Post>,
-    private readonly auditService: AuditService,
+    private readonly creatorsService: CreatorsService,
+    private readonly postVisibilityService: PostVisibilityService,
   ) {}
 
   async createPost(
@@ -38,6 +39,10 @@ export class PostsService {
     return this.toDto(saved);
   }
 
+  /**
+   * Owner's own view of their posts (GET /creators/me/posts). No visibility
+   * filtering — an owner always sees all of their own non-deleted posts.
+   */
   async getCreatorPosts(
     creatorId: number,
     page: number = 1,
@@ -61,49 +66,38 @@ export class PostsService {
     };
   }
 
-  async getArchivedPosts(
-    creatorId: number,
+  /**
+   * Public read path: GET /creators/:handle/posts. Resolves the handle via
+   * CreatorsService (the single handle-resolution authority — see
+   * docs/post-visibility.md), then checks subscriber access ONCE for the
+   * whole request rather than once per post, so this never becomes an N+1
+   * query as the page grows.
+   */
+  async getPostsByHandle(
+    handle: string,
+    viewer: PostViewer | undefined,
     page: number = 1,
     limit: number = 10,
   ): Promise<PaginatedPostsResponseDto> {
+    const creatorUserId =
+      await this.creatorsService.getCreatorUserIdByHandle(handle);
+    const includeSubscriberOnly =
+      await this.postVisibilityService.canViewSubscriberContent(
+        viewer,
+        creatorUserId,
+      );
+
     const skip = (page - 1) * limit;
-
-    const [posts, total] = await this.postsRepo.findAndCount({
-      where: { creatorId, deletedAt: Not(IsNull()) },
-      order: { deletedAt: 'DESC' },
-      skip,
-      take: limit,
-    });
-
-    return {
-      data: posts.map((p) => this.toDto(p)),
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    };
-  }
-
-  async getPublicCreatorPosts(
-    creatorId: number,
-    isSubscriber: boolean,
-    page: number = 1,
-    limit: number = 10,
-  ): Promise<PaginatedPostsResponseDto> {
-    const skip = (page - 1) * limit;
-
-    let query = this.postsRepo
+    const qb = this.postsRepo
       .createQueryBuilder('post')
-      .where('post.creatorId = :creatorId', { creatorId })
+      .where('post.creatorId = :creatorId', { creatorId: creatorUserId })
       .andWhere('post.deletedAt IS NULL');
 
-    if (!isSubscriber) {
-      query = query.andWhere('post.visibility = :visibility', {
-        visibility: 'public',
-      });
+    if (!includeSubscriberOnly) {
+      qb.andWhere('post.visibility = :visibility', { visibility: 'public' });
     }
 
-    const [posts, total] = await query
+    const [posts, total] = await qb
       .orderBy('post.publishedAt', 'DESC')
       .skip(skip)
       .take(limit)
@@ -118,11 +112,35 @@ export class PostsService {
     };
   }
 
-  async getPostById(postId: number): Promise<PostResponseDto> {
+  /**
+   * Public read path: GET /creators/:handle/posts/:postId. Same visibility
+   * rules as the list endpoint. Returns a plain 404 (not 403) whether the
+   * post doesn't exist, is deleted, or exists but is unauthorized for this
+   * viewer — this endpoint never confirms the existence of subscriber-only
+   * content to an unauthorized caller.
+   */
+  async getPostByHandle(
+    handle: string,
+    postId: number,
+    viewer: PostViewer | undefined,
+  ): Promise<PostResponseDto> {
+    const creatorUserId =
+      await this.creatorsService.getCreatorUserIdByHandle(handle);
+
     const post = await this.postsRepo.findOne({
-      where: { id: postId, deletedAt: IsNull() },
+      where: { id: postId, creatorId: creatorUserId, deletedAt: IsNull() },
     });
-    if (!post) throw new NotFoundException('Post not found');
+
+    const notFound = () => new NotFoundException('Post not found');
+    if (!post) throw notFound();
+
+    const canView = await this.postVisibilityService.canViewPost(
+      post,
+      viewer,
+      creatorUserId,
+    );
+    if (!canView) throw notFound();
+
     return this.toDto(post);
   }
 
@@ -158,55 +176,16 @@ export class PostsService {
   }
 
   async deletePost(postId: number, creatorId: number): Promise<void> {
-    const post = await this.postsRepo.findOne({ where: { id: postId } });
+    const post = await this.postsRepo.findOne({
+      where: { id: postId, deletedAt: IsNull() },
+    });
 
     if (!post) throw new NotFoundException('Post not found');
     if (post.creatorId !== creatorId)
       throw new ForbiddenException("Cannot delete another creator's post");
 
-    if (post.deletedAt) {
-      // Already deleted — idempotent no-op.
-      return;
-    }
-
     post.deletedAt = new Date();
-    post.deletedById = creatorId;
     await this.postsRepo.save(post);
-
-    void this.auditService.log({
-      actorId: creatorId,
-      action: AuditAction.POST_SOFT_DELETED,
-      targetType: 'Post',
-      targetId: postId,
-    });
-  }
-
-  async restorePost(
-    postId: number,
-    creatorId: number,
-  ): Promise<PostResponseDto> {
-    const post = await this.postsRepo.findOne({ where: { id: postId } });
-
-    if (!post) throw new NotFoundException('Post not found');
-    if (post.creatorId !== creatorId)
-      throw new ForbiddenException("Cannot restore another creator's post");
-
-    if (!post.deletedAt) {
-      throw new ConflictException('Post is not deleted');
-    }
-
-    post.deletedAt = null;
-    post.deletedById = null;
-    const restored = await this.postsRepo.save(post);
-
-    void this.auditService.log({
-      actorId: creatorId,
-      action: AuditAction.POST_RESTORED,
-      targetType: 'Post',
-      targetId: postId,
-    });
-
-    return this.toDto(restored);
   }
 
   private toDto(post: Post): PostResponseDto {
