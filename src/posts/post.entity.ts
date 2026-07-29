@@ -13,8 +13,8 @@ import { User } from '../users/user.entity';
 type Visibility = 'public' | 'subscribers';
 
 @Entity('posts')
-@Index(['creatorId', 'publishedAt'])
-@Index(['visibility', 'publishedAt'])
+@Index(['creatorId', 'publishedAt'], { where: '"deletedAt" IS NULL' })
+@Index(['visibility', 'publishedAt'], { where: '"deletedAt" IS NULL' })
 @Index(['creatorId', 'visibility'])
 @Index(['creatorId', 'deletedAt', 'publishedAt'])
 export class Post {

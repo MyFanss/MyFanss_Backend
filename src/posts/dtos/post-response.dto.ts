@@ -51,4 +51,11 @@ export class PostResponseDto {
     description: 'Last update timestamp',
   })
   updatedAt: Date;
+
+  @ApiPropertyOptional({
+    example: null,
+    description: 'When the post was soft-deleted, or null if active',
+    nullable: true,
+  })
+  deletedAt: Date | null;
 }

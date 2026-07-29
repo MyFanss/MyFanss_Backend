@@ -90,6 +90,7 @@ describe('PostsService', () => {
         publishedAt: mockPost.publishedAt,
         createdAt: mockPost.createdAt,
         updatedAt: mockPost.updatedAt,
+        deletedAt: mockPost.deletedAt,
       });
       expect(mockPostsRepo.create).toHaveBeenCalled();
       expect(mockPostsRepo.save).toHaveBeenCalled();
@@ -133,6 +134,16 @@ describe('PostsService', () => {
           where: expect.objectContaining({ creatorId: 1 }),
         }),
       );
+    });
+
+    it('should exclude soft-deleted posts', async () => {
+      mockPostsRepo.findAndCount.mockResolvedValue([[], 0]);
+
+      await service.getCreatorPosts(1, 1, 10);
+
+      const callArgs = mockPostsRepo.findAndCount.mock.calls[0][0];
+      expect(callArgs.where.creatorId).toBe(1);
+      expect(callArgs.where.deletedAt._type).toBe('isNull');
     });
 
     it('should calculate pagination correctly', async () => {
@@ -248,6 +259,17 @@ describe('PostsService', () => {
     });
   });
 
+  describe('getPostById', () => {
+    it('should throw NotFoundException for a soft-deleted post', async () => {
+      mockPostsRepo.findOne.mockResolvedValue(null);
+
+      await expect(service.getPostById(1)).rejects.toThrow(NotFoundException);
+      expect(mockPostsRepo.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ id: 1 }) }),
+      );
+    });
+  });
+
   describe('updatePost', () => {
     it('should update a post by owner', async () => {
       mockPostsRepo.findOne.mockResolvedValue(mockPost);
@@ -274,6 +296,14 @@ describe('PostsService', () => {
 
       await expect(
         service.updatePost(999, 1, { title: 'Updated Title' }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw NotFoundException if post is soft-deleted', async () => {
+      mockPostsRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.updatePost(1, 1, { title: 'Updated Title' }),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -303,6 +333,91 @@ describe('PostsService', () => {
       mockPostsRepo.findOne.mockResolvedValue(null);
 
       await expect(service.deletePost(999, 1)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should be idempotent — deleting an already-deleted post is a no-op', async () => {
+      mockPostsRepo.findOne.mockResolvedValue({
+        ...mockPost,
+        deletedAt: new Date(),
+        deletedById: 1,
+      });
+
+      await service.deletePost(1, 1);
+
+      expect(mockPostsRepo.save).not.toHaveBeenCalled();
+      expect(mockAuditService.log).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('restorePost', () => {
+    it('should restore a soft-deleted post by owner', async () => {
+      mockPostsRepo.findOne.mockResolvedValue({
+        ...mockPost,
+        deletedAt: new Date(),
+        deletedById: 1,
+      });
+      mockPostsRepo.save.mockImplementation((p) => Promise.resolve(p));
+
+      const result = await service.restorePost(1, 1);
+
+      expect(result.deletedAt).toBeNull();
+      expect(mockPostsRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ deletedAt: null, deletedById: null }),
+      );
+      expect(mockAuditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorId: 1,
+          action: AuditAction.POST_RESTORED,
+          targetType: 'Post',
+          targetId: 1,
+        }),
+      );
+    });
+
+    it('should throw NotFoundException if post does not exist', async () => {
+      mockPostsRepo.findOne.mockResolvedValue(null);
+
+      await expect(service.restorePost(999, 1)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it("should throw ForbiddenException when restoring another creator's post", async () => {
+      mockPostsRepo.findOne.mockResolvedValue({
+        ...mockPost,
+        deletedAt: new Date(),
+      });
+
+      await expect(service.restorePost(1, 999)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('should throw ConflictException when the post is not deleted', async () => {
+      mockPostsRepo.findOne.mockResolvedValue({ ...mockPost, deletedAt: null });
+
+      await expect(service.restorePost(1, 1)).rejects.toThrow(
+        ConflictException,
+      );
+      expect(mockPostsRepo.save).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('assertPostIsEngageable', () => {
+    it('should return the post when active', async () => {
+      mockPostsRepo.findOne.mockResolvedValue(mockPost);
+
+      const result = await service.assertPostIsEngageable(1);
+
+      expect(result).toEqual(mockPost);
+    });
+
+    it('should throw NotFoundException for a missing or soft-deleted post', async () => {
+      mockPostsRepo.findOne.mockResolvedValue(null);
+
+      await expect(service.assertPostIsEngageable(1)).rejects.toThrow(
         NotFoundException,
       );
     });
