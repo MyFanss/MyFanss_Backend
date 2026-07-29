@@ -40,6 +40,13 @@ function assertJwtConfig(value: Record<string, unknown>): void {
     errors.push('JWT_EXPIRES_IN or JWT_ACCESS_EXPIRATION is required');
   }
 
+  // In production, an unverified billing webhook would let anyone flip
+  // subscription state — refuse to boot rather than silently accepting
+  // unsigned events.
+  if (value.NODE_ENV === 'production' && !value.BILLING_WEBHOOK_SECRET) {
+    errors.push('BILLING_WEBHOOK_SECRET is required when NODE_ENV=production');
+  }
+
   if (errors.length > 0) {
     throw new Error(
       `Environment validation failed:\n${errors.map((message) => `  - ${message}`).join('\n')}`,

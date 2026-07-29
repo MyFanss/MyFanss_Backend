@@ -12,6 +12,10 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
     logger: new AppLogger(),
+    // Needed so the billing webhook controller can verify the HMAC
+    // signature against the exact bytes the provider sent, before any JSON
+    // parsing/transformation touches the body.
+    rawBody: true,
   });
 
   // Serve uploaded files (local storage only — S3 serves its own URLs)
