@@ -26,6 +26,7 @@ describe('SubscriptionsService', () => {
             findAndCount: jest.fn(),
             create: jest.fn(),
             save: jest.fn(),
+            count: jest.fn(),
           },
         },
         {
@@ -225,6 +226,42 @@ describe('SubscriptionsService', () => {
       expect(subscriptionRepo.findAndCount).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { creatorId: 2, status: 'active' },
+        }),
+      );
+    });
+  });
+
+  describe('isActiveSubscriber', () => {
+    it('returns true when an active subscription row exists', async () => {
+      subscriptionRepo.count.mockResolvedValue(1);
+
+      const result = await service.isActiveSubscriber(1, 2);
+
+      expect(result).toBe(true);
+      expect(subscriptionRepo.count).toHaveBeenCalledWith({
+        where: { fanId: 1, creatorId: 2, status: 'active' },
+      });
+    });
+
+    it('returns false when there is no active subscription row', async () => {
+      subscriptionRepo.count.mockResolvedValue(0);
+
+      const result = await service.isActiveSubscriber(1, 2);
+
+      expect(result).toBe(false);
+    });
+
+    it('returns false for a cancelled subscription (count excludes it)', async () => {
+      // The `status: 'active'` filter in the count query is what excludes a
+      // cancelled row; this asserts the service never widens that filter.
+      subscriptionRepo.count.mockResolvedValue(0);
+
+      const result = await service.isActiveSubscriber(1, 2);
+
+      expect(result).toBe(false);
+      expect(subscriptionRepo.count).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ status: 'active' }),
         }),
       );
     });

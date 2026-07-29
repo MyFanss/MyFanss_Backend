@@ -18,6 +18,7 @@ import { CreatePostDto } from './dtos/create-post.dto';
 import { UpdatePostDto } from './dtos/update-post.dto';
 import { PaginationQueryDto } from './dtos/pagination-query.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import {
   ApiTags,
   ApiOperation,
@@ -27,12 +28,18 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 
+interface AuthenticatedRequestUser {
+  userId: number;
+  email: string;
+  username: string;
+}
+
 interface AuthenticatedRequest extends Request {
-  user: {
-    userId: number;
-    email: string;
-    username: string;
-  };
+  user: AuthenticatedRequestUser;
+}
+
+interface OptionallyAuthenticatedRequest extends Request {
+  user?: AuthenticatedRequestUser;
 }
 
 @ApiTags('Posts')
@@ -75,27 +82,71 @@ export class PostsController {
   }
 
   @Get(':handle/posts')
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({
     summary:
-      'Get public posts by creator (paginated, visibility-aware for subscribers)',
+      'Get posts by creator handle (paginated). Auth is optional: anonymous ' +
+      'callers and non-subscribers see only public posts; the owner or an ' +
+      'active subscriber additionally see subscriber-only posts.',
   })
-  @ApiResponse({ status: 200, description: 'Posts retrieved successfully' })
-  @ApiParam({ name: 'handle', description: 'Creator handle/identifier' })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Posts retrieved successfully. Content included depends on the ' +
+      'caller: anonymous/non-subscriber -> public only; owner/active ' +
+      'subscriber -> public + subscribers.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'No creator exists for this handle',
+  })
+  @ApiParam({
+    name: 'handle',
+    description: 'Public creator handle (string, e.g. "creator_one")',
+  })
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
   async getCreatorPostsByHandle(
-    @Param('handle', ParseIntPipe) creatorId: number,
+    @Param('handle') handle: string,
     @Query() query: PaginationQueryDto,
-    @Req() req?: Request,
+    @Req() req: OptionallyAuthenticatedRequest,
   ) {
-    // For now, treat unauthenticated users as non-subscribers
-    const isSubscriber = false;
-    return this.postsService.getPublicCreatorPosts(
-      creatorId,
-      isSubscriber,
+    const viewer = req.user ? { userId: req.user.userId } : undefined;
+    return this.postsService.getPostsByHandle(
+      handle,
+      viewer,
       query.page,
       query.limit,
     );
+  }
+
+  @Get(':handle/posts/:postId')
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiOperation({
+    summary:
+      'Get a single post by creator handle and post id, with the same ' +
+      'visibility rules as the list endpoint',
+  })
+  @ApiResponse({ status: 200, description: 'Post retrieved successfully' })
+  @ApiResponse({
+    status: 404,
+    description:
+      'Creator not found, post not found, or post exists but is not ' +
+      'visible to this caller (unauthorized subscriber/owner-only content ' +
+      'is reported as 404, not 403, to avoid leaking its existence)',
+  })
+  @ApiParam({
+    name: 'handle',
+    description: 'Public creator handle (string, e.g. "creator_one")',
+  })
+  @ApiParam({ name: 'postId', description: 'Post ID' })
+  async getCreatorPostByHandle(
+    @Param('handle') handle: string,
+    @Param('postId', ParseIntPipe) postId: number,
+    @Req() req: OptionallyAuthenticatedRequest,
+  ) {
+    const viewer = req.user ? { userId: req.user.userId } : undefined;
+    return this.postsService.getPostByHandle(handle, postId, viewer);
   }
 
   @Patch('me/posts/:id')

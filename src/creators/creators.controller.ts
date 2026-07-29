@@ -80,13 +80,23 @@ export class CreatorsController {
 
   @Get(':handle')
   @ApiOperation({ summary: 'Public creator profile by handle (no auth)' })
-  @ApiParam({ name: 'handle', description: 'Public creator handle' })
+  @ApiParam({
+    name: 'handle',
+    description: 'Public creator handle (string, e.g. "creator_one")',
+  })
   @ApiResponse({
     status: 200,
     description: 'Public creator profile',
     type: CreatorResponseDto,
   })
-  @ApiResponse({ status: 404, description: 'Creator not found' })
+  @ApiResponse({
+    status: 404,
+    description:
+      'No creator for this handle. Returned uniformly for a malformed ' +
+      'handle, an unknown handle, a not-yet-onboarded profile, or a ' +
+      'soft-deleted owning account — response body carries ' +
+      '{ code: "CREATOR_NOT_FOUND" }.',
+  })
   async getByHandle(
     @Param('handle') handle: string,
   ): Promise<CreatorResponseDto> {
