@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
@@ -143,6 +144,19 @@ export class PostsService {
     return this.toDto(post);
   }
 
+  /**
+   * Enforcement point for future engagement features (likes/comments): a
+   * missing or soft-deleted post must behave identically — 404. See
+   * docs/post-lifecycle.md for the full contract.
+   */
+  async assertPostIsEngageable(postId: number): Promise<Post> {
+    const post = await this.postsRepo.findOne({
+      where: { id: postId, deletedAt: IsNull() },
+    });
+    if (!post) throw new NotFoundException('Post not found');
+    return post;
+  }
+
   async updatePost(
     postId: number,
     creatorId: number,
@@ -185,6 +199,7 @@ export class PostsService {
       publishedAt: post.publishedAt,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
+      deletedAt: post.deletedAt,
     };
   }
 }

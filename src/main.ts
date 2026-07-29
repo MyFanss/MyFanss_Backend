@@ -12,6 +12,10 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
     logger: new AppLogger(),
+    // Needed so the billing webhook controller can verify the HMAC
+    // signature against the exact bytes the provider sent, before any JSON
+    // parsing/transformation touches the body.
+    rawBody: true,
   });
 
   // Serve uploaded files (local storage only — S3 serves its own URLs)
@@ -103,7 +107,9 @@ MyFans uses **JWT Bearer tokens**. Here is the full login → authorize cycle:
 | **Subscriptions** | Fan subscription management |
 | **Creators** | Creator onboarding, profiles, and analytics |
 | **Notifications** | Notification preferences |
+| **Tips** | Tip intents, confirmation, inbox and history |
 | **Audit** | Admin-only audit log access |
+| **Messaging** | Direct messages between fans and creators |
 
 ---
 

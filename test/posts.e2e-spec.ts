@@ -543,6 +543,35 @@ describe('Posts (e2e)', () => {
         .expect(404);
     });
 
+    it('should hide the deleted post from the owner active list', async () => {
+      const res = await request(server())
+        .get('/creators/me/posts')
+        .set('Authorization', authHeader())
+        .query({ page: 1, limit: 100 })
+        .expect(200);
+
+      const deleted = res.body.data.find((p) => p.id === deletePostId);
+      expect(deleted).toBeUndefined();
+    });
+
+    it('should list the deleted post in the owner archive', async () => {
+      const res = await request(server())
+        .get('/creators/me/posts/archived')
+        .set('Authorization', authHeader())
+        .expect(200);
+
+      const archived = res.body.data.find((p) => p.id === deletePostId);
+      expect(archived).toBeDefined();
+      expect(archived.deletedAt).not.toBeNull();
+    });
+
+    it('should be idempotent — deleting an already-deleted post returns 204', async () => {
+      await request(server())
+        .delete(`/creators/me/posts/${deletePostId}`)
+        .set('Authorization', authHeader())
+        .expect(204);
+    });
+
     it('should prevent non-owner from deleting', async () => {
       const createRes = await request(server())
         .post('/creators/me/posts')
@@ -575,6 +604,102 @@ describe('Posts (e2e)', () => {
     it('should require authentication', async () => {
       await request(server())
         .delete(`/creators/me/posts/${deletePostId}`)
+        .expect(401);
+    });
+  });
+
+  describe('POST /creators/me/posts/:id/restore (Restore)', () => {
+    let restorePostId: number;
+
+    beforeAll(async () => {
+      const res = await request(server())
+        .post('/creators/me/posts')
+        .set('Authorization', authHeader())
+        .send({
+          title: 'Post to Restore',
+          body: 'Will be deleted then restored',
+          visibility: 'public',
+        })
+        .expect(201);
+
+      restorePostId = res.body.id;
+
+      await request(server())
+        .delete(`/creators/me/posts/${restorePostId}`)
+        .set('Authorization', authHeader())
+        .expect(204);
+    });
+
+    it('should restore a soft-deleted post back to public/owner lists', async () => {
+      const res = await request(server())
+        .post(`/creators/me/posts/${restorePostId}/restore`)
+        .set('Authorization', authHeader())
+        .expect(200);
+
+      expect(res.body.deletedAt).toBeNull();
+
+      const ownList = await request(server())
+        .get('/creators/me/posts')
+        .set('Authorization', authHeader())
+        .query({ page: 1, limit: 100 })
+        .expect(200);
+      expect(
+        ownList.body.data.find((p) => p.id === restorePostId),
+      ).toBeDefined();
+
+      const publicList = await request(server())
+        .get(`/creators/${userId}/posts`)
+        .query({ page: 1, limit: 100 })
+        .expect(200);
+      expect(
+        publicList.body.data.find((p) => p.id === restorePostId),
+      ).toBeDefined();
+    });
+
+    it('should return 409 when restoring a post that is not deleted', async () => {
+      await request(server())
+        .post(`/creators/me/posts/${restorePostId}/restore`)
+        .set('Authorization', authHeader())
+        .expect(409);
+    });
+
+    it("should prevent restoring another creator's post", async () => {
+      const createRes = await request(server())
+        .post('/creators/me/posts')
+        .set('Authorization', authHeader())
+        .send({
+          title: 'Another Post',
+          body: 'Owned by original creator',
+          visibility: 'public',
+        })
+        .expect(201);
+
+      await request(server())
+        .delete(`/creators/me/posts/${createRes.body.id}`)
+        .set('Authorization', authHeader())
+        .expect(204);
+
+      const otherUser = await signupUser(testApp.app, {
+        name: 'Other Restorer',
+        email: 'other-restorer@example.com',
+      });
+
+      await request(server())
+        .post(`/creators/me/posts/${createRes.body.id}/restore`)
+        .set('Authorization', bearerToken(otherUser.token))
+        .expect(403);
+    });
+
+    it('should return 404 for non-existent post', async () => {
+      await request(server())
+        .post('/creators/me/posts/99999/restore')
+        .set('Authorization', authHeader())
+        .expect(404);
+    });
+
+    it('should require authentication', async () => {
+      await request(server())
+        .post(`/creators/me/posts/${restorePostId}/restore`)
         .expect(401);
     });
   });

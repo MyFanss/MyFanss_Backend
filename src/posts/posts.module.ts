@@ -15,5 +15,6 @@ import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
   ],
   providers: [PostsService, PostVisibilityService],
   controllers: [PostsController],
+  exports: [PostsService],
 })
 export class PostsModule {}

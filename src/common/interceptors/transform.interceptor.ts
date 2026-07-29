@@ -13,9 +13,10 @@ export interface Response<T> {
 }
 
 @Injectable()
-export class TransformInterceptor<T>
-  implements NestInterceptor<T, Response<T>>
-{
+export class TransformInterceptor<T> implements NestInterceptor<
+  T,
+  Response<T>
+> {
   intercept(
     context: ExecutionContext,
     next: CallHandler,
@@ -37,7 +38,10 @@ export class TransformInterceptor<T>
           const { data: innerData, pagination, meta, ...rest } = data;
           return {
             data: innerData,
-            meta: meta || pagination || (Object.keys(rest).length ? rest : undefined),
+            meta:
+              meta ||
+              pagination ||
+              (Object.keys(rest).length ? rest : undefined),
           };
         }
 

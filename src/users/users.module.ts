@@ -16,7 +16,12 @@ import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, RefreshToken, NotificationPreference, Subscription]),
+    TypeOrmModule.forFeature([
+      User,
+      RefreshToken,
+      NotificationPreference,
+      Subscription,
+    ]),
     CacheModule.register(),
     AuditModule,
     NotificationsModule,

@@ -126,9 +126,6 @@ export class GdprService {
       metadata: { softDelete: true, revokedSessions: true },
     });
 
-    this.logger.log(
-      `User self-deleted: userId=${userId}`,
-      GdprService.name,
-    );
+    this.logger.log(`User self-deleted: userId=${userId}`, GdprService.name);
   }
 }
