@@ -22,6 +22,7 @@ import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { UploadsModule } from './uploads/uploads.module';
 import { ModerationModule } from './moderation/moderation.module';
 import { CommentsModule } from './comments/comments.module';
+import { MessagingModule } from './messaging/messaging.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { CommentsModule } from './comments/comments.module';
     UploadsModule,
     ModerationModule,
     CommentsModule,
+    MessagingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -9,6 +9,8 @@ import { CreatorProfile } from 'src/creators/creator-profile.entity';
 import { PasswordResetToken } from 'src/auth/entities/password-reset-token.entity';
 import { ContentReport } from 'src/moderation/content-report.entity';
 import { Comment } from 'src/comments/comment.entity';
+import { Conversation } from 'src/messaging/conversation.entity';
+import { Message } from 'src/messaging/message.entity';
 import { DataSourceOptions } from 'typeorm';
 
 export function dataOption(configService: ConfigService): DataSourceOptions {
@@ -30,6 +32,8 @@ export function dataOption(configService: ConfigService): DataSourceOptions {
       PasswordResetToken,
       ContentReport,
       Comment,
+      Conversation,
+      Message,
     ],
     synchronize: true,
   };
