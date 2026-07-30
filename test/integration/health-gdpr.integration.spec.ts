@@ -89,9 +89,7 @@ describe('Health & GDPR (integration)', () => {
   // ─── GDPR export tests ───────────────────────────────────────────────
 
   it('GET /users/me/export returns 401 without authentication token', async () => {
-    await request(ctx.app.getHttpServer())
-      .get('/users/me/export')
-      .expect(401);
+    await request(ctx.app.getHttpServer()).get('/users/me/export').expect(401);
   });
 
   it('GET /users/me/export returns profile excluding password hash', async () => {

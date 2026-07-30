@@ -96,6 +96,7 @@ export class FeedService {
       publishedAt: post.publishedAt,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
+      deletedAt: post.deletedAt,
     };
   }
 }

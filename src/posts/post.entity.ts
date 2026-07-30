@@ -60,4 +60,11 @@ export class Post {
    */
   @Column({ type: 'timestamp', nullable: true })
   deletedAt: Date | null;
+
+  /**
+   * Who soft-deleted the post (always the owning creator today). Nulled back
+   * out on restore, mirroring deletedAt.
+   */
+  @Column({ type: 'int', nullable: true })
+  deletedById: number | null;
 }

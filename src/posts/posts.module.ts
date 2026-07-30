@@ -6,12 +6,16 @@ import { PostsController } from './posts.controller';
 import { PostVisibilityService } from './post-visibility.service';
 import { CreatorsModule } from '../creators/creators.module';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
+import { AuditModule } from '../audit/audit.module';
+import { WebhooksModule } from '../webhooks/webhooks.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Post]),
     CreatorsModule,
     SubscriptionsModule,
+    AuditModule,
+    WebhooksModule,
   ],
   providers: [PostsService, PostVisibilityService],
   controllers: [PostsController],

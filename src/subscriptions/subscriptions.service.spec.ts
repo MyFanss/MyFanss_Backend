@@ -5,12 +5,13 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { SubscriptionsService } from './subscriptions.service';
 import { Subscription } from './subscription.entity';
 import { User } from '../users/user.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MailerService } from '../mailer/mailer.service';
+import { WebhooksService } from '../webhooks/webhooks.service';
 
 describe('SubscriptionsService', () => {
   let service: SubscriptionsService;
@@ -22,6 +23,8 @@ describe('SubscriptionsService', () => {
   let mailerService: jest.Mocked<
     Pick<MailerService, 'sendNewSubscriberNotification'>
   >;
+  let webhooksService: jest.Mocked<Pick<WebhooksService, 'emit'>>;
+  let transactionManager: { save: jest.Mock };
 
   beforeEach(async () => {
     notificationsService = { shouldNotify: jest.fn().mockResolvedValue(true) };
@@ -29,6 +32,20 @@ describe('SubscriptionsService', () => {
       sendNewSubscriberNotification: jest
         .fn()
         .mockResolvedValue({ accepted: true }),
+    };
+    webhooksService = { emit: jest.fn().mockResolvedValue(undefined) };
+
+    // The subscribe() write path runs inside dataSource.transaction(); the
+    // mock manager's save() defers to the same subscriptionRepo mock so
+    // existing per-test `subscriptionRepo.save.mockResolvedValue(...)` setups
+    // keep working unchanged.
+    transactionManager = {
+      save: jest.fn((_entity, data) => subscriptionRepo.save(data)),
+    };
+    const dataSource = {
+      transaction: jest.fn((runInTransaction: (manager: unknown) => unknown) =>
+        runInTransaction(transactionManager),
+      ),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -52,6 +69,8 @@ describe('SubscriptionsService', () => {
         },
         { provide: NotificationsService, useValue: notificationsService },
         { provide: MailerService, useValue: mailerService },
+        { provide: DataSource, useValue: dataSource },
+        { provide: WebhooksService, useValue: webhooksService },
       ],
     }).compile();
 
@@ -79,18 +98,14 @@ describe('SubscriptionsService', () => {
     it('creates a new active subscription', async () => {
       userRepo.findOne.mockResolvedValue({ id: 2 } as User);
       subscriptionRepo.findOne.mockResolvedValue(null);
-      const created = {
+      subscriptionRepo.save.mockResolvedValue({
         fanId: 1,
         creatorId: 2,
         status: 'active',
         cancelledAt: null,
-      } as Subscription;
-      subscriptionRepo.create.mockReturnValue(created);
-      subscriptionRepo.save.mockResolvedValue({
-        ...created,
         id: 'uuid-1',
         subscribedAt: new Date(),
-      });
+      } as Subscription);
 
       const result = await service.subscribe(1, { creatorId: 2 });
 
@@ -101,7 +116,35 @@ describe('SubscriptionsService', () => {
         status: 'active',
         cancelledAt: null,
       });
-      expect(subscriptionRepo.create).toHaveBeenCalled();
+      expect(subscriptionRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ fanId: 1, creatorId: 2, status: 'active' }),
+      );
+    });
+
+    it('emits a subscription.created webhook event in the same transaction as the write', async () => {
+      userRepo.findOne.mockResolvedValue({ id: 2 } as User);
+      subscriptionRepo.findOne.mockResolvedValue(null);
+      subscriptionRepo.save.mockResolvedValue({
+        fanId: 1,
+        creatorId: 2,
+        status: 'active',
+        cancelledAt: null,
+        id: 'uuid-1',
+        subscribedAt: new Date(),
+      } as Subscription);
+
+      await service.subscribe(1, { creatorId: 2 });
+
+      expect(webhooksService.emit).toHaveBeenCalledTimes(1);
+      expect(webhooksService.emit).toHaveBeenCalledWith(
+        'subscription.created',
+        expect.objectContaining({
+          subscriptionId: 'uuid-1',
+          fanId: 1,
+          creatorId: 2,
+        }),
+        transactionManager,
+      );
     });
 
     it('returns 409 when an active subscription already exists', async () => {

@@ -7,12 +7,14 @@ import { SubscriptionsController } from './subscriptions.controller';
 import { CreatorsController } from './creators.controller';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { MailerModule } from '../mailer/mailer.module';
+import { WebhooksModule } from '../webhooks/webhooks.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Subscription, User]),
     NotificationsModule,
     MailerModule,
+    WebhooksModule,
   ],
   providers: [SubscriptionsService],
   controllers: [SubscriptionsController, CreatorsController],

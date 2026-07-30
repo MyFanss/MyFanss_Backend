@@ -131,9 +131,7 @@ describe('Password Reset Flow (Unit)', () => {
       const mockUser = { id: 42, email, name: 'Test User' };
       usersService.findByEmail.mockResolvedValue(mockUser);
       resetTokenRepo.save.mockResolvedValue({});
-      mailerService.sendPasswordReset.mockRejectedValue(
-        new Error('SMTP down'),
-      );
+      mailerService.sendPasswordReset.mockRejectedValue(new Error('SMTP down'));
 
       await expect(authService.forgotPassword(email)).resolves.toBeUndefined();
     });

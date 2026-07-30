@@ -648,7 +648,7 @@ describe('Posts (e2e)', () => {
       ).toBeDefined();
 
       const publicList = await request(server())
-        .get(`/creators/${userId}/posts`)
+        .get(`/creators/${handle}/posts`)
         .query({ page: 1, limit: 100 })
         .expect(200);
       expect(

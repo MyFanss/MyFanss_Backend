@@ -27,6 +27,7 @@ const envSchema = Joi.object({
   SMTP_PASS: Joi.string().allow('').optional(),
   SMTP_FROM: Joi.string().optional(),
   MAILER_TIMEOUT_MS: Joi.number().integer().min(1).default(10000),
+  WEBHOOK_DEBUG_URL: Joi.string().uri().optional(),
 });
 
 function assertJwtConfig(value: Record<string, unknown>): void {
