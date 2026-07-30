@@ -9,6 +9,7 @@ import { CreatorProfile } from 'src/creators/creator-profile.entity';
 import { PasswordResetToken } from 'src/auth/entities/password-reset-token.entity';
 import { ContentReport } from 'src/moderation/content-report.entity';
 import { Tip } from 'src/tips/tip.entity';
+import { WebhookEvent } from 'src/webhooks/webhook-event.entity';
 import { DataSourceOptions } from 'typeorm';
 
 export function dataOption(configService: ConfigService): DataSourceOptions {
@@ -30,6 +31,7 @@ export function dataOption(configService: ConfigService): DataSourceOptions {
       PasswordResetToken,
       ContentReport,
       Tip,
+      WebhookEvent,
     ],
     synchronize: true,
   };

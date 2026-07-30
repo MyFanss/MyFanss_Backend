@@ -184,9 +184,7 @@ export class UsersService {
    * GDPR: Export all personal data for the authenticated user.
    * Returns profile (without password hash), notification preferences, and subscriptions.
    */
-  async exportMyData(
-    userId: number,
-  ): Promise<{
+  async exportMyData(userId: number): Promise<{
     profile: Record<string, unknown>;
     preferences: Record<string, unknown> | null;
     subscriptions: Record<string, unknown>[];
@@ -197,7 +195,12 @@ export class UsersService {
     }
 
     // Exclude password hash, search text, and internal flags
-    const { password: _pw, search_text: _st, is_deleted: _del, ...profile } = user;
+    const {
+      password: _pw,
+      search_text: _st,
+      is_deleted: _del,
+      ...profile
+    } = user;
 
     // Fetch notification preferences
     const preferences = await this.notificationPreferenceRepository.findOneBy({

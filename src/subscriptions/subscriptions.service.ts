@@ -4,8 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Subscription } from './subscription.entity';
 import { User } from '../users/user.entity';
 import { CreateSubscriptionDto } from './dtos/create-subscription.dto';
@@ -18,6 +18,8 @@ import {
 } from '../users/dtos/paginated-response.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MailerService } from '../mailer/mailer.service';
+import { WebhooksService } from '../webhooks/webhooks.service';
+import { WEBHOOK_EVENT_TYPES } from '../webhooks/webhook-event-type.const';
 
 @Injectable()
 export class SubscriptionsService {
@@ -28,6 +30,8 @@ export class SubscriptionsService {
     private readonly userRepository: Repository<User>,
     private readonly notificationsService: NotificationsService,
     private readonly mailerService: MailerService,
+    @InjectDataSource() private readonly dataSource: DataSource,
+    private readonly webhooksService: WebhooksService,
   ) {}
 
   /**
@@ -60,29 +64,43 @@ export class SubscriptionsService {
       where: { fanId, creatorId },
     });
 
-    if (existing) {
-      if (existing.status === 'active') {
-        throw new ConflictException(
-          'An active subscription to this creator already exists',
-        );
-      }
-
-      // Reactivate the previously cancelled subscription.
-      existing.status = 'active';
-      existing.cancelledAt = null;
-      existing.subscribedAt = new Date();
-      const reactivated = await this.subscriptionRepository.save(existing);
-      await this.notifyCreatorOfNewSubscriber(fanId, creator);
-      return this.toResponse(reactivated);
+    if (existing?.status === 'active') {
+      throw new ConflictException(
+        'An active subscription to this creator already exists',
+      );
     }
 
-    const subscription = this.subscriptionRepository.create({
-      fanId,
-      creatorId,
-      status: 'active',
-      cancelledAt: null,
+    const saved = await this.dataSource.transaction(async (manager) => {
+      let subscription: Subscription;
+
+      if (existing) {
+        // Reactivate the previously cancelled subscription.
+        existing.status = 'active';
+        existing.cancelledAt = null;
+        existing.subscribedAt = new Date();
+        subscription = await manager.save(Subscription, existing);
+      } else {
+        subscription = await manager.save(Subscription, {
+          fanId,
+          creatorId,
+          status: 'active',
+          cancelledAt: null,
+        });
+      }
+
+      await this.webhooksService.emit(
+        WEBHOOK_EVENT_TYPES.SUBSCRIPTION_CREATED,
+        {
+          subscriptionId: subscription.id,
+          fanId: subscription.fanId,
+          creatorId: subscription.creatorId,
+        },
+        manager,
+      );
+
+      return subscription;
     });
-    const saved = await this.subscriptionRepository.save(subscription);
+
     await this.notifyCreatorOfNewSubscriber(fanId, creator);
     return this.toResponse(saved);
   }

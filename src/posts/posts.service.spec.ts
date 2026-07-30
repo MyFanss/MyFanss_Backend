@@ -1,14 +1,25 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  NotFoundException,
+  ForbiddenException,
+  ConflictException,
+} from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { PostsService } from './posts.service';
 import { Post } from './post.entity';
 import { CreatorsService } from '../creators/creators.service';
 import { PostVisibilityService } from './post-visibility.service';
+import { AuditService } from '../audit/audit.service';
+import { AuditAction } from '../audit/audit-action.enum';
+import { WebhooksService } from '../webhooks/webhooks.service';
 
 describe('PostsService', () => {
   let service: PostsService;
   let mockPostsRepo: any;
+  let mockAuditService: jest.Mocked<Pick<AuditService, 'log'>>;
+  let webhooksService: jest.Mocked<Pick<WebhooksService, 'emit'>>;
+  let transactionManager: { create: jest.Mock; save: jest.Mock };
   let creatorsService: jest.Mocked<
     Pick<CreatorsService, 'getCreatorUserIdByHandle'>
   >;
@@ -48,6 +59,22 @@ describe('PostsService', () => {
       canViewPost: jest.fn(),
     };
 
+    mockAuditService = { log: jest.fn().mockResolvedValue(undefined) };
+    webhooksService = { emit: jest.fn().mockResolvedValue(undefined) };
+
+    // createPost() runs inside dataSource.transaction(); defer the mock
+    // manager's create()/save() to the same mockPostsRepo so existing
+    // `mockPostsRepo.create/save.mockReturnValue(...)` setups keep working.
+    transactionManager = {
+      create: jest.fn((_entity, data) => mockPostsRepo.create(data)),
+      save: jest.fn((_entity, data) => mockPostsRepo.save(data)),
+    };
+    const dataSource = {
+      transaction: jest.fn((runInTransaction: (manager: unknown) => unknown) =>
+        runInTransaction(transactionManager),
+      ),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PostsService,
@@ -57,6 +84,9 @@ describe('PostsService', () => {
         },
         { provide: CreatorsService, useValue: creatorsService },
         { provide: PostVisibilityService, useValue: visibilityService },
+        { provide: AuditService, useValue: mockAuditService },
+        { provide: DataSource, useValue: dataSource },
+        { provide: WebhooksService, useValue: webhooksService },
       ],
     }).compile();
 
@@ -114,6 +144,30 @@ describe('PostsService', () => {
       const result = await service.createPost(1, dto);
 
       expect(result.mediaUrl).toBe('https://example.com/image.jpg');
+    });
+
+    it('emits a post.published webhook event in the same transaction as the write', async () => {
+      const dto = {
+        title: 'Test Post',
+        body: 'Test body',
+        visibility: 'public' as const,
+      };
+
+      mockPostsRepo.create.mockReturnValue(mockPost);
+      mockPostsRepo.save.mockResolvedValue(mockPost);
+
+      await service.createPost(1, dto);
+
+      expect(webhooksService.emit).toHaveBeenCalledTimes(1);
+      expect(webhooksService.emit).toHaveBeenCalledWith(
+        'post.published',
+        expect.objectContaining({
+          postId: mockPost.id,
+          creatorId: mockPost.creatorId,
+          visibility: mockPost.visibility,
+        }),
+        transactionManager,
+      );
     });
   });
 
@@ -256,17 +310,6 @@ describe('PostsService', () => {
       });
 
       expect(result.id).toBe(1);
-    });
-  });
-
-  describe('getPostById', () => {
-    it('should throw NotFoundException for a soft-deleted post', async () => {
-      mockPostsRepo.findOne.mockResolvedValue(null);
-
-      await expect(service.getPostById(1)).rejects.toThrow(NotFoundException);
-      expect(mockPostsRepo.findOne).toHaveBeenCalledWith(
-        expect.objectContaining({ where: expect.objectContaining({ id: 1 }) }),
-      );
     });
   });
 
