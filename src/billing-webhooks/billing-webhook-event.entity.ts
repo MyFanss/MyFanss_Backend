@@ -12,6 +12,12 @@ export type BillingWebhookEventStatus =
   | 'ignored'
   | 'failed';
 
+export type WebhookEventStatus =
+  | 'pending'
+  | 'delivered'
+  | 'failed'
+  | 'dead';
+
 @Entity('billing_webhook_events')
 @Index(['eventId'], { unique: true })
 @Index(['status', 'receivedAt'])
@@ -53,4 +59,38 @@ export class BillingWebhookEvent {
 
   @Column({ type: 'timestamp', nullable: true })
   processedAt: Date | null;
+}
+
+// Transactional outbox for platform events destined for partner webhooks.
+// Rows are written in the same DB transaction as the domain change so that
+// an event is never lost if the dispatcher sink is unavailable.
+@Entity('webhook_events')
+@Index(['status', 'nextAttemptAt'])
+export class WebhookEvent {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ type: 'varchar' })
+  eventType: string;
+
+  @Column({ type: 'jsonb' })
+  payload: Record<string, unknown>;
+
+  @Column({ type: 'varchar', default: 'pending' })
+  status: WebhookEventStatus;
+
+  @Column({ type: 'int', default: 0 })
+  attempts: number;
+
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  nextAttemptAt: Date;
+
+  @Column({ type: 'text', nullable: true })
+  lastError: string | null;
+
+  @CreateDateColumn({ type: 'timestamp' })
+  createdAt: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  deliveredAt: Date | null;
 }

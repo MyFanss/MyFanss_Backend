@@ -23,6 +23,7 @@ import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { UploadsModule } from './uploads/uploads.module';
 import { ModerationModule } from './moderation/moderation.module';
 import { TipsModule } from './tips/tips.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { TipsModule } from './tips/tips.module';
     UploadsModule,
     ModerationModule,
     TipsModule,
+    WebhooksModule,
   ],
   controllers: [AppController],
   providers: [AppService],
